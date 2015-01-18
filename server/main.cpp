@@ -1,11 +1,12 @@
-#include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "process.h"
+#include "fsdirect.h"
+#include "server.h"
 
 void startDaemon(void) {
 	// Fork the parent process.
@@ -22,7 +23,7 @@ void startDaemon(void) {
 		exit(EXIT_FAILURE);
 
 	// Catch, ignore and handle signals.
-	//TODO: Implement a working signal handler.
+	// TODO: Implement a working signal handler.
 	signal(SIGCHLD, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
 
@@ -53,16 +54,19 @@ int main() {
 	// Currently disabled to allow easy viewing of output.
 	// startDaemon();
 
-	// For now, load and run the args.so program.
-	Process proc;
-	if (!proc.loadFileLocal("../programs/args/args.so")) {
-		printf("Error: Could not load program.\n");
-		return EXIT_FAILURE;
+	// Load file system which server will 'boot' from.
+	const char *containerPath="./container";
+	FSDirect fs;
+	if (!fs.mountFile(containerPath)) {
+		std::cout << "Error: Could not load container '" << containerPath << "'." << std::endl;
+		exit(EXIT_FAILURE);
 	}
 
-	if (!proc.run(2, "hello", "world!")) {
-		printf("Error: Could not run program.\n");
-		return EXIT_FAILURE;
+	// Create server instance and run init program.
+	Server server(128*1024*1024, 1);
+	if (!server.run(&fs, "init/init.so")) {
+		std::cout << "Error: Could not run server." << std::endl;
+		exit(EXIT_FAILURE);
 	}
 
 	return EXIT_SUCCESS;

@@ -71,7 +71,18 @@ bool Process::loadFileLocal(const char *path) {
 	return false;
 }
 
-bool Process::run(unsigned int argc, ...) {
+bool Process::loadFileFS(FS *fs, const char *path) {
+	// dlopen requires a local file so ask the file system for such a file.
+	char *localPath=fs->fileLocalPath(path);
+	if (localPath==NULL)
+		return false;
+	bool ret=this->loadFileLocal(localPath);
+	free(localPath);
+
+	return ret;
+}
+
+bool Process::run(bool doFork, unsigned int argc, ...) {
 	// TODO: Check argc can fit into type.
 
 	// Ensure a program is loaded.
@@ -110,16 +121,18 @@ bool Process::run(unsigned int argc, ...) {
 	}
 	va_end(ap);
 
-	// Fork to create new process.
-	pid_t pid=fork();
+	// Fork to create new process, if desired.
+	pid_t pid=(doFork ? fork() : 0);
 	if (pid<0)
 		return false;
 	else if (pid==0) {
 		// Child process calls _start - the entry point of the new program.
 		(*start)((void *)&info);
 
-		// End this process.
-		exit(EXIT_SUCCESS);
+		// End this process if we forked.
+		if (doFork)
+			exit(EXIT_SUCCESS);
 	}
+
 	return true;
 }

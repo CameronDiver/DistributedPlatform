@@ -3,7 +3,7 @@ CC=clang++
 CPPFLAGS=-Wall -std=c++11
 LFLAGS=-ldl
 
-OBJS=process.o main.o util.o
+OBJS=fs.o fsdirect.o process.o main.o server.o util.o
 
 EXE=main
 
@@ -16,4 +16,4 @@ $(EXE): $(OBJS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 clean:
-		rm $(OBJS)
+		rm -f $(OBJS)

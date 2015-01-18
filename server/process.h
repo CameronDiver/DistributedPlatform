@@ -4,6 +4,8 @@
 #include <cstdarg>
 #include <cstdint>
 
+#include "fs.h"
+
 typedef int (*ProcessMain)(unsigned int, const char **);
 typedef void (*ProcessStart)(const void *);
 
@@ -12,7 +14,8 @@ class Process {
  	Process(void);
  	~Process(void);
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
- 	bool run(unsigned int argc, ...);
+	bool loadFileFS(FS *fs, const char *path);
+ 	bool run(bool doFork=true, unsigned int argc=0, ...);
  private:
  	struct
  	{
