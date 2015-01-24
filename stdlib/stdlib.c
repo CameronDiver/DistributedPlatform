@@ -1,5 +1,6 @@
 #include "stdint.h"
 #include "stdlib.h"
+#include "string.h"
 #include "syscall.h"
 
 typedef int (*ProcessMain)(unsigned int, const char **);
@@ -29,6 +30,30 @@ int Dabs(int x) {
 
 void Dexit(int status) {
 	sys_exit(status);
+}
+
+void *Dmalloc(size_t size)
+{
+	return Drealloc(NULL, size);
+}
+
+void Dfree(void *ptr)
+{
+	Drealloc(ptr, 0);
+}
+
+void *Dcalloc(size_t nmemb, size_t size)
+{
+	void *ptr=Drealloc(NULL, nmemb*size);
+	if (ptr==NULL)
+		return NULL;
+	memset(ptr, 0, nmemb*size);
+	return ptr;
+}
+
+void *Drealloc(void *ptr, size_t size)
+{
+	return sys_alloc(ptr, size);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
