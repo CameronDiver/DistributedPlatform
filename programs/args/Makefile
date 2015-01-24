@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS=-Wall -nostdlib -lgcc -nostartfiles -ffreestanding -fpic
 LFLAGS=-shared
 
-OBJS=args.o ../../stdlib/stdio.o ../../stdlib/stdlib.o ../../stdlib/unistd.o ../../stdlib/syscall.o
+OBJS=args.o ../../stdlib/stdio.o ../../stdlib/stdlib.o ../../stdlib/unistd.o ../../stdlib/syscall.o ../../stdlib/string.o
 
 EXE=args.so
 
