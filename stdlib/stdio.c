@@ -1,50 +1,50 @@
 #include "stdio.h"
 
-int printf(const char *format, ...) {
+int Dprintf(const char *format, ...) {
 	va_list ap;
 	va_start(ap, format);
-	int ret=vprintf(format, ap);
+	int ret=Dvprintf(format, ap);
 	va_end(ap);
 	return ret;
 }
 
-int fprintf(FILE *stream, const char *format, ...) {
+int Dfprintf(FILE *stream, const char *format, ...) {
 	va_list ap;
 	va_start(ap, format);
-	int ret=vfprintf(stream, format, ap);
+	int ret=Dvfprintf(stream, format, ap);
 	va_end(ap);
 	return ret;
 }
 
-int sprintf(char *str, const char *format, ...) {
+int Dsprintf(char *str, const char *format, ...) {
 	va_list ap;
 	va_start(ap, format);
-	int ret=vsprintf(str, format, ap);
+	int ret=Dvsprintf(str, format, ap);
 	va_end(ap);
 	return ret;
 }
 
-int snprintf(char *str, size_t size, const char *format, ...) {
+int Dsnprintf(char *str, size_t size, const char *format, ...) {
 	// TODO: snprintf
 	return 0;
 }
 
-int vprintf(const char *format, va_list ap) {
+int Dvprintf(const char *format, va_list ap) {
 	// TODO: vprintf
-	return 0;
+	return vprintf(format, ap);
 }
 
-int vfprintf(FILE *stream, const char *format, va_list ap) {
+int Dvfprintf(FILE *stream, const char *format, va_list ap) {
 	// TODO: vfprintf
 	return 0;
 }
 
-int vsprintf(char *str, const char *format, va_list ap) {
+int Dvsprintf(char *str, const char *format, va_list ap) {
 	// TODO: vsprintf
 	return 0;
 }
 
-int vsnprintf(char *str, size_t size, const char *format, va_list ap) {
+int Dvsnprintf(char *str, size_t size, const char *format, va_list ap) {
 	// TODO: vsnprintf
 	return 0;
 }

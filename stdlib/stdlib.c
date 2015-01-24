@@ -20,12 +20,12 @@ void _start(const void *);
 // Public functions.
 ////////////////////////////////////////////////////////////////////////////////
 
-int abs(int x) {
+int Dabs(int x) {
 	return (x>=0 ? x : -x);
 }
 
-void exit(int status) {
-	// TODO: exit
+void Dexit(int status) {
+	sys_exit(status);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,5 +34,5 @@ void exit(int status) {
 
 void _start(const void *ptr) {
 	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
-	exit((*info->main)(info->argc, info->argv));
+	Dexit((*info->main)(info->argc, info->argv));
 }
