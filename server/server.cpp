@@ -21,7 +21,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		case 0: // exit
 		{
 			uint32_t status=(uint32_t)va_arg(ap, uint32_t);
-			// TODO: Exit syscall.
+			exit(status);
 		}
 		break;
 		case 1: // fork
