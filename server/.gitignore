@@ -2,7 +2,9 @@
 
 # Object files
 *.o
-# Executable
+# Executables
 main
+# Container
+container
 # Backup files
 *~
