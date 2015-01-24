@@ -28,3 +28,10 @@ uint32_t sys_getpid(void)
 	(*sys_syscall)(sys_data, 2, &ret);
 	return ret;
 }
+
+void *sys_alloc(void *ptr, size_t size)
+{
+	void *ret;
+	(*sys_syscall)(sys_data, 3, &ret, ptr, size);
+	return ret;
+}

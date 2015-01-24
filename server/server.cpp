@@ -33,6 +33,15 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 	  	*ret=data->pid;
 	  }
 		break;
+		case 3: // alloc
+		{
+			// TODO: Take server wide maxRam into account.
+			void **ret=(void **)va_arg(ap, void **);
+			void *ptr=(void *)va_arg(ap, void *);
+			size_t size=(size_t)va_arg(ap, size_t);
+			*ret=realloc(ptr, size);
+		}
+		break;
 		default:
 			// TODO: What to do in case of invalid syscall?
 		break;
