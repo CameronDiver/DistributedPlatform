@@ -16,4 +16,7 @@ $(EXE): $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-		@rm -f $(OBJS)
+	@rm -f $(OBJS)
+
+install:
+	cp ./init.so ../../server/container/init/init.so
