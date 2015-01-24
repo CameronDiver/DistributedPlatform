@@ -2,8 +2,10 @@
 #define SERVER_H
 
 #include <cstddef>
+#include <vector>
 
 #include "fs.h"
+#include "process.h"
 
 class Server {
  public:
@@ -11,6 +13,11 @@ class Server {
 	~Server(void);
 
 	bool run(FS *fs, const char *initPath);
+ private:
+	std::vector<Process> procs;
+	
+	ProcessPID processAdd(Process *proc);
+	bool processRun(ProcessPID pid, bool doFork=true);
 };
 
 #endif 

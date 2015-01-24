@@ -6,6 +6,10 @@
 
 #include "fs.h"
 
+typedef int32_t ProcessPID;
+
+enum class ProcessState { None, Loaded, Running };
+
 typedef int (*ProcessMain)(unsigned int, const char **);
 typedef void (*ProcessStart)(const void *);
 
@@ -13,9 +17,13 @@ class Process {
  public:
  	Process(void);
  	~Process(void);
+ 	
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 	bool loadFileFS(FS *fs, const char *path);
+	
  	bool run(bool doFork=true, unsigned int argc=0, ...);
+ 	
+ 	ProcessState getState(void);
  private:
  	struct
  	{
@@ -27,6 +35,7 @@ class Process {
  	void *dlHandle;
 	ProcessStart start;
 	char *name;
+	ProcessState state;
 };
 
 #endif 

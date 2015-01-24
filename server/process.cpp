@@ -12,9 +12,11 @@ Process::Process(void) {
 	info.main=NULL;
 	dlHandle=NULL;
 	name=NULL;
+	state=ProcessState::None;
 }
 
 Process::~Process(void) {
+	// argc and argv.
 	if (info.argv!=NULL) {
 		unsigned int i;
 		for(i=0;i<info.argc;++i)
@@ -23,19 +25,30 @@ Process::~Process(void) {
 		info.argv=NULL;
 	}
 	info.argc=0;
+
+	// Dynamic library.
 	if (dlHandle!=NULL)	{
 		dlclose(dlHandle);
 		dlHandle=NULL;
 	}
+	
+	// Name.
 	if (name!=NULL) {
 		free(name);
 		name=NULL;
 	}
+	
+	// Others.
+	state=ProcessState::None;
 }
 
 bool Process::loadFileLocal(const char *path) {
 	const char *pathLast;
 	size_t nameSize;
+	
+	// Check we are not already loaded or running.
+	if (state!=ProcessState::None)
+		return false;
 
 	// Attempt to open the program as a dynamic library.
 	dlHandle=dlopen(path, RTLD_LAZY);
@@ -56,6 +69,9 @@ bool Process::loadFileLocal(const char *path) {
 		goto error;
 	memcpy((void *)name, (void *)pathLast, nameSize);
 
+	// Update state.
+	state=ProcessState::Loaded;
+	
 	// Success.
 	return true;
 
@@ -85,8 +101,8 @@ bool Process::loadFileFS(FS *fs, const char *path) {
 bool Process::run(bool doFork, unsigned int argc, ...) {
 	// TODO: Check argc can fit into type.
 
-	// Ensure a program is loaded.
-	if (dlHandle==NULL)
+	// Ensure program is loaded but not running.
+	if (state!=ProcessState::Loaded)
 		return false;
 
 	// Setup argc and argv. Do this before forking in case of error.
@@ -126,6 +142,9 @@ bool Process::run(bool doFork, unsigned int argc, ...) {
 	if (pid<0)
 		return false;
 	else if (pid==0) {
+		// Set state to running.
+		state=ProcessState::Running;
+		
 		// Child process calls _start - the entry point of the new program.
 		(*start)((void *)&info);
 
@@ -135,4 +154,9 @@ bool Process::run(bool doFork, unsigned int argc, ...) {
 	}
 
 	return true;
+}
+
+ProcessState Process::getState(void)
+{
+	return state;
 }
