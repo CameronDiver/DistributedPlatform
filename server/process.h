@@ -6,7 +6,8 @@
 
 #include "fs.h"
 
-typedef int32_t ProcessPID;
+typedef uint32_t ProcessPID;
+const ProcessPID ProcessPIDError=0;
 
 enum class ProcessState { None, Loaded, Running };
 
@@ -21,7 +22,7 @@ class Process {
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 	bool loadFileFS(FS *fs, const char *path);
 	
- 	bool run(bool doFork=true, unsigned int argc=0, ...);
+ 	bool run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork=true, unsigned int argc=0, ...);
  	
  	ProcessState getState(void);
  private:
@@ -31,6 +32,8 @@ class Process {
 		uint16_t argc;
 		const char **argv; // TODO: Static assert that sizeof(char)==1?
 		ProcessMain main;
+		void (*syscall)(void *, uint32_t, ...);
+		void *syscallData;
  	}info;
  	void *dlHandle;
 	ProcessStart start;

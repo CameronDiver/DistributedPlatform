@@ -10,6 +10,8 @@ Process::Process(void) {
 	info.argc=0;
 	info.argv=NULL;
 	info.main=NULL;
+	info.syscall=NULL;
+	info.syscallData=NULL;
 	dlHandle=NULL;
 	name=NULL;
 	state=ProcessState::None;
@@ -39,6 +41,9 @@ Process::~Process(void) {
 	}
 	
 	// Others.
+	info.syscall=NULL;
+	free(info.syscallData);
+	info.syscallData=NULL;
 	state=ProcessState::None;
 }
 
@@ -98,7 +103,7 @@ bool Process::loadFileFS(FS *fs, const char *path) {
 	return ret;
 }
 
-bool Process::run(bool doFork, unsigned int argc, ...) {
+bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, ...) {
 	// TODO: Check argc can fit into type.
 
 	// Ensure program is loaded but not running.
@@ -144,6 +149,10 @@ bool Process::run(bool doFork, unsigned int argc, ...) {
 	else if (pid==0) {
 		// Set state to running.
 		state=ProcessState::Running;
+		
+		// Setup syscall functor.
+		info.syscall=syscall;
+		info.syscallData=syscallData;
 		
 		// Child process calls _start - the entry point of the new program.
 		(*start)((void *)&info);

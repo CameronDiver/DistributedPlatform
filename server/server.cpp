@@ -1,9 +1,49 @@
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 
 #include "server.h"
 
+typedef struct
+{
+	ProcessPID pid;
+}ServerSysCallData;
+
+extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
+{
+	ServerSysCallData *data=(ServerSysCallData *)gdata;
+	
+	va_list ap;
+	va_start(ap, id);
+	
+	switch(id)
+	{
+		case 0: // exit
+		{
+			uint32_t status=(uint32_t)va_arg(ap, uint32_t);
+			// TODO: Exit syscall.
+		}
+		break;
+		case 1: // fork
+			// TODO: Fork syscall.
+		break;
+		case 2: // getpid
+	  {
+	  	uint32_t *ret=(uint32_t *)va_arg(ap, uint32_t *);
+	  	*ret=data->pid;
+	  }
+		break;
+		default:
+			// TODO: What to do in case of invalid syscall?
+		break;
+	}
+	
+	va_end(ap);
+}
+
 Server::Server(size_t maxRam, size_t maxCores) {
+	Process dummyProc; // To create PID of 1 for init.
+	procs.push_back(dummyProc);
 }
 
 Server::~Server(void) {
@@ -17,7 +57,7 @@ bool Server::run(FS *fs, const char *initPath) {
 	
 	// Add to list of processes.
 	ProcessPID initPID=Server::processAdd(&initProc);
-	if (initPID==-1)
+	if (initPID==ProcessPIDError)
 		return false;
 	
 	// Run (without forking, so blocking).
@@ -31,7 +71,7 @@ ProcessPID Server::processAdd(Process *proc)
 {
 	// Check process is loaded but not running (hence ready to run).
 	if (proc->getState()!=ProcessState::Loaded)
-		return -1;
+		return ProcessPIDError;
 	
 	// Add to queue.
 	ProcessPID pid=procs.size();
@@ -42,6 +82,13 @@ ProcessPID Server::processAdd(Process *proc)
 
 bool Server::processRun(ProcessPID pid, bool doFork)
 {
-	assert(pid>=0 && pid<procs.size());
-	return procs[pid].run(doFork);
+	assert(pid>=1 && pid<procs.size());
+	
+	// Allocate syscall data structure.
+	ServerSysCallData *data=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
+	if (data==NULL)
+		return false;
+	data->pid=pid;
+	
+	return procs[pid].run(&serverSysCall, (void *)data, doFork);
 }
