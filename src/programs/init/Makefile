@@ -17,6 +17,3 @@ $(EXE): $(OBJS)
 
 clean:
 	@rm -f $(OBJS)
-
-install:
-	cp ./init.so ../../server/container/init/init.so
