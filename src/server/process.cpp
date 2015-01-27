@@ -104,6 +104,14 @@ bool Process::loadFileFS(FS *fs, const char *path) {
 }
 
 bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, ...) {
+	va_list ap;
+	va_start(ap, argc);
+	bool ret=vrun(syscall, syscallData, doFork, argc, ap);
+	va_end(ap);
+	return ret;
+}
+
+bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap) {
 	// TODO: Check argc can fit into type.
 
 	// Ensure program is loaded but not running.
@@ -116,8 +124,6 @@ bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, boo
 	if (info.argv==NULL)
 		return false;
 	unsigned int i;
-	va_list ap;
-	va_start(ap, argc);
 	size_t size=strlen(name)+1;
 	info.argv[0]=(const char *)malloc(sizeof(char)*size);
 	if (info.argv[0]==NULL) {
@@ -140,7 +146,6 @@ bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, boo
 		}
 		memcpy((void *)info.argv[i], (void *)arg, size);
 	}
-	va_end(ap);
 
 	// Fork to create new process, if desired.
 	pid_t pid=(doFork ? fork() : 0);

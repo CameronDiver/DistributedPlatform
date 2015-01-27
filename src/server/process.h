@@ -22,7 +22,8 @@ class Process {
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 	bool loadFileFS(FS *fs, const char *path);
 	
- 	bool run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork=true, unsigned int argc=0, ...);
+ 	bool run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc=0, ...);
+ 	bool vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap);
  	
  	ProcessState getState(void);
  private:

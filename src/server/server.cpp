@@ -89,7 +89,7 @@ ProcessPID Server::processAdd(Process *proc)
 	return pid;
 }
 
-bool Server::processRun(ProcessPID pid, bool doFork)
+bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...)
 {
 	assert(pid>=1 && pid<procs.size());
 	
@@ -99,5 +99,11 @@ bool Server::processRun(ProcessPID pid, bool doFork)
 		return false;
 	data->pid=pid;
 	
-	return procs[pid].run(&serverSysCall, (void *)data, doFork);
+	// Run process.
+	va_list ap;
+	va_start(ap, argc);
+	bool ret=procs[pid].vrun(&serverSysCall, (void *)data, doFork, argc, ap);
+	va_end(ap);
+	
+	return ret;
 }

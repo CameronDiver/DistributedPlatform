@@ -1,6 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <cstdarg>
 #include <cstddef>
 #include <vector>
 
@@ -17,7 +18,7 @@ class Server {
 	std::vector<Process> procs;
 	
 	ProcessPID processAdd(Process *proc);
-	bool processRun(ProcessPID pid, bool doFork=true);
+	bool processRun(ProcessPID pid, bool doFork=true, unsigned int argc=0, ...);
 };
 
 #endif 
