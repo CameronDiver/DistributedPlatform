@@ -41,7 +41,10 @@ void startDaemon(void) {
 
 	// Change the working directory to the root directory.
 	// TODO: Change this to a more sensible place?
-	chdir("/");
+	//chdir("/");
+	// We don't want this overwriting things during the
+	// testing phase - c
+	chdir("/tmp");
 
 	// Close all open file descriptors.
 	int x;
