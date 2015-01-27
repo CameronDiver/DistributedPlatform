@@ -1,12 +1,25 @@
 #!/bin/bash
-mkdir ./container
-mkdir ./container/init
+mkdir -p ./container
+cd ./container
+mkdir -p ./bin
+mkdir -p ./init
+cd ../
 
 cp ./init.so ../../../container/init/init
-cd ./src/programs/init
-make clean
-make
-cd ../../../
+
+cd ./src/programs
+	cd ./init
+	make clean
+	make
+	cp ./init.so ../../../container/init/init
+	cd ../
+
+	cd  ./factor
+	make clean
+	make
+	cp ./factor.so ../../../container/bin/factor
+	cd ../
+cd ../../
 
 cd ./src/server
 make clean
