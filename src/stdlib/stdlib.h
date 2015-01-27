@@ -14,4 +14,9 @@ void Dfree(void *ptr);
 void *Dcalloc(size_t nmemb, size_t size);
 void *Drealloc(void *ptr, size_t size);
 
+int Datoi(const char *nptr);
+long Datol(const char *nptr);
+long long Datoll(const char *nptr);
+long long Datoq(const char *nptr);
+
 #endif

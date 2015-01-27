@@ -56,6 +56,30 @@ void *Drealloc(void *ptr, size_t size)
 	return sys_alloc(ptr, size);
 }
 
+int Datoi(const char *nptr)
+{
+	return Datoll(nptr);
+}
+
+long Datol(const char *nptr)
+{
+	return Datoll(nptr);
+}
+
+long long Datoll(const char *nptr)
+{
+	long long ret=0;
+	for(;*nptr;nptr++) {
+	 ret=10*ret+(*nptr-'0');
+	}
+	return ret;
+}
+
+long long Datoq(const char *nptr)
+{
+	return Datoll(nptr);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Private functions.
 ////////////////////////////////////////////////////////////////////////////////
