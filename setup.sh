@@ -2,10 +2,10 @@
 mkdir ./container
 mkdir ./container/init
 
+cp ./init.so ../../../container/init/init
 cd ./src/programs/init
 make clean
 make
-cp ./init.so ../../../container/init/init.so
 cd ../../../
 
 cd ./src/server
