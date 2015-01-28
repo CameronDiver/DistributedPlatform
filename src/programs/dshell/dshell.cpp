@@ -1,5 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+
+#include "token.h"
 
 #ifndef DSHELL_VERSION
 	#define DSHELL_VERSION 0.1
@@ -20,14 +22,12 @@ int main(int argc, char *argv[]) {
 	int count;
 	while((count = getline(&input, &size, stdin)) != -1) {
 		// process the input
-		Dprintf("%i: %s\t [%p]\n", count, input, input);
 		
 		//split the strings up by spaces. 
 		// use a custom parser as strings 
 		// and other things can contain spaces
-		// tokenize -> work out what job is -> do job
-
-		
+		std::vector<Token> tokens;
+		tokenize(input, tokens);
 
 	}
 	free(input);

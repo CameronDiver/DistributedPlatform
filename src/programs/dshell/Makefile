@@ -1,11 +1,11 @@
-CC=gcc
+CC=clang++
 
 #CFLAGS=-Wall -nostdlib -lgcc -nostartfiles -ffreestanding -fpic
 #LFLAGS=-shared
 
 CFLAGS=-Wall
 
-OBJS=dshell.o
+OBJS=dshell.o token.o
 
 EXE=dshell
 
