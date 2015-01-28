@@ -19,6 +19,24 @@ cd ./src/programs
 	make
 	cp ./factor.so ../../../container/bin/factor
 	cd ../
+	
+	cd ./true
+	make clean
+	make
+	cp ./true.so ../../../container/bin/true
+	cd ../
+	
+	cd ./false
+	make clean
+	make
+	cp ./false.so ../../../container/bin/false
+	cd ../
+	
+	cd ./yes
+	make clean
+	make
+	cp ./yes.so ../../../container/bin/yes
+	cd ../
 cd ../../
 
 cd ./src/server
