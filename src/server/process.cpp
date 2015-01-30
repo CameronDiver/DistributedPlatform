@@ -14,6 +14,7 @@ Process::Process(void) {
 	info.syscallData=NULL;
 	dlHandle=NULL;
 	name=NULL;
+	path=NULL;
 	state=ProcessState::None;
 }
 
@@ -40,6 +41,12 @@ Process::~Process(void) {
 		name=NULL;
 	}
 	
+	// Path.
+	if (path!=NULL) {
+		free(name);
+		name=NULL;
+	}
+	
 	// Others.
 	info.syscall=NULL;
 	free(info.syscallData);
@@ -47,16 +54,16 @@ Process::~Process(void) {
 	state=ProcessState::None;
 }
 
-bool Process::loadFileLocal(const char *path) {
+bool Process::loadFileLocal(const char *gpath) {
 	const char *pathLast;
-	size_t nameSize;
+	size_t nameSize, pathSize;
 	
 	// Check we are not already loaded or running.
 	if (state!=ProcessState::None)
 		return false;
 
 	// Attempt to open the program as a dynamic library.
-	dlHandle=dlopen(path, RTLD_LAZY);
+	dlHandle=dlopen(gpath, RTLD_LAZY);
 	if (dlHandle==NULL)
 		goto error;
 
@@ -67,12 +74,19 @@ bool Process::loadFileLocal(const char *path) {
 		goto error;
 
 	// Allocate memory for name.
-	pathLast=strstrrev(path, "/")+1;
+	pathLast=strstrrev(gpath, "/")+1;
 	nameSize=strlen(pathLast)+1;
 	name=(char *)malloc(sizeof(char)*nameSize);
 	if (name==NULL)
 		goto error;
 	memcpy((void *)name, (void *)pathLast, nameSize);
+	
+	// Allocate memory for path.
+	pathSize=strlen(gpath)+1;
+	path=(char *)malloc(sizeof(char)*pathSize);
+	if (path==NULL)
+		goto error;
+	memcpy((void *)path, (void *)gpath, pathSize);
 
 	// Update state.
 	state=ProcessState::Loaded;
@@ -88,6 +102,10 @@ bool Process::loadFileLocal(const char *path) {
 	if (name!=NULL) {
 		free(name);
 		name=NULL;
+	}
+	if (path!=NULL) {
+		free(path);
+		path=NULL;
 	}
 	return false;
 }
@@ -168,6 +186,81 @@ bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 	}
 
 	return true;
+}
+
+Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscallData) {
+	size_t nameSize, pathSize;
+
+	// Create 'blank' child.
+	Process *child=new Process;
+	if (child==NULL)
+		return NULL;
+	child->info.argc=0;
+	child->info.argv=NULL;
+	child->info.syscallData=NULL;
+	child->dlHandle=NULL;
+	child->name=NULL;
+	child->path=NULL;
+	
+	// argc and argv.
+	child->info.argv=(const char **)malloc(sizeof(char *)*info.argc);
+	if (child->info.argv==NULL)
+		goto error;
+	for(child->info.argc=0;child->info.argc<info.argc;++child->info.argc)
+	{
+		size_t argSize=strlen(info.argv[child->info.argc])+1;
+		child->info.argv[child->info.argc]=(const char *)malloc(sizeof(char)*argSize);
+		if (child->info.argv[child->info.argc]==NULL)
+			goto error;
+		memcpy((void *)child->info.argv[child->info.argc], (void *)info.argv[child->info.argc], argSize);
+	}
+	
+	// Name.
+	nameSize=strlen(name)+1;
+	child->name=(char *)malloc(nameSize);
+	if (child->name==NULL)
+		goto error;
+	memcpy(child->name, name, nameSize);
+	
+	// Path.
+	pathSize=strlen(path)+1;
+	child->path=(char *)malloc(pathSize);
+	if (child->path==NULL)
+		goto error;
+	memcpy(child->path, path, pathSize);
+	
+	// (re)load shared library.
+	child->dlHandle=dlopen(path, RTLD_LAZY);
+	if (child->dlHandle==NULL)
+		goto error;
+	
+	// Grab _start and main function pointers.
+	child->info.main=(ProcessMain)dlsym(child->dlHandle, "main");
+	child->start=(ProcessStart)dlsym(child->dlHandle, "_start");
+	if (child->info.main==NULL || child->start==NULL)
+		goto error;
+	
+	// Simple stuff.
+	info.syscall=syscall;
+	info.syscallData=syscallData;
+	child->state=state;
+	
+	return child;
+	
+	error:
+	if (child->info.argv!=NULL) {
+		unsigned int i;
+		for(i=0;i<child->info.argc;++i)
+			free((void *)child->info.argv[i]);
+		free((void *)child->info.argv);
+	}
+	dlclose(child->dlHandle);
+	if (child->name!=NULL)
+		free((void *)child->name);
+	if (child->path!=NULL)
+		free((void *)child->path);
+	delete child;
+	return NULL;
 }
 
 ProcessState Process::getState(void)

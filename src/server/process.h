@@ -6,8 +6,8 @@
 
 #include "fs.h"
 
-typedef uint32_t ProcessPID;
-const ProcessPID ProcessPIDError=0;
+typedef int32_t ProcessPID;
+const ProcessPID ProcessPIDError=-1;
 
 enum class ProcessState { None, Loaded, Running };
 
@@ -25,6 +25,8 @@ class Process {
  	bool run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc=0, ...);
  	bool vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap);
  	
+ 	Process *forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscallData);
+ 	
  	ProcessState getState(void);
  private:
  	struct
@@ -39,6 +41,7 @@ class Process {
  	void *dlHandle;
 	ProcessStart start;
 	char *name;
+	char *path;
 	ProcessState state;
 };
 

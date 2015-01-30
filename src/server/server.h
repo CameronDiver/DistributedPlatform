@@ -14,6 +14,8 @@ class Server {
 	~Server(void);
 
 	bool run(FS *fs, const char *initPath);
+	
+	ProcessPID processFork(ProcessPID parentPID);
  private:
 	std::vector<Process> procs;
 	

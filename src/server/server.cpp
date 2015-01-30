@@ -1,11 +1,13 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <unistd.h>
 
 #include "server.h"
 
 typedef struct
 {
+	Server *server;
 	ProcessPID pid;
 }ServerSysCallData;
 
@@ -25,11 +27,14 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		}
 		break;
 		case 1: // fork
-			// TODO: Fork syscall.
+		{
+	  	int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			*ret=data->server->processFork(data->pid);
+	  }
 		break;
 		case 2: // getpid
 	  {
-	  	uint32_t *ret=(uint32_t *)va_arg(ap, uint32_t *);
+	  	int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
 	  	*ret=data->pid;
 	  }
 		break;
@@ -76,8 +81,42 @@ bool Server::run(FS *fs, const char *initPath) {
 	return true;
 }
 
-ProcessPID Server::processAdd(Process *proc)
-{
+ProcessPID Server::processFork(ProcessPID parentPID) {
+	// Child will require own system call data.
+	ServerSysCallData *data=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
+	if (data==NULL)
+		return false;
+	data->server=this;
+	
+	// Create child process.
+	Process *parent=&procs[parentPID];
+	Process *child=parent->forkCopy(&serverSysCall, (void *)data);
+	if (child==NULL)
+	{
+		free(data);
+		return ProcessPIDError;
+	}
+	
+	// Add child to list of processes.
+	ProcessPID childPID=procs.size();
+	data->pid=childPID;
+	procs.push_back(*child);
+	
+	// Fork.
+	pid_t pid=fork();
+	if (pid<0)
+	{
+		// Error.
+		procs.pop_back();
+		return ProcessPIDError;
+	}
+  else if (pid==0)
+  	return 0; // fork() returns 0 to child.
+  else
+  	return childPID; // fork() return child pid to parent.
+}
+
+ProcessPID Server::processAdd(Process *proc) {
 	// Check process is loaded but not running (hence ready to run).
 	if (proc->getState()!=ProcessState::Loaded)
 		return ProcessPIDError;
@@ -89,14 +128,14 @@ ProcessPID Server::processAdd(Process *proc)
 	return pid;
 }
 
-bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...)
-{
+bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
 	assert(pid>=1 && pid<procs.size());
 	
 	// Allocate syscall data structure.
 	ServerSysCallData *data=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
 	if (data==NULL)
 		return false;
+	data->server=this;
 	data->pid=pid;
 	
 	// Run process.
@@ -104,6 +143,10 @@ bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...)
 	va_start(ap, argc);
 	bool ret=procs[pid].vrun(&serverSysCall, (void *)data, doFork, argc, ap);
 	va_end(ap);
+	
+	// If process could not be created, no longer need system call data.
+	if (ret==false)
+		free(data);
 	
 	return ret;
 }
