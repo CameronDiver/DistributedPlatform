@@ -14,4 +14,6 @@ uint32_t sys_getpid(void);
 
 void *sys_alloc(void *ptr, size_t size);
 
+void sys_exec(const char *path, uint32_t argc, char **argv);
+
 #endif

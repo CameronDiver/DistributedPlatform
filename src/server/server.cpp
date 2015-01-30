@@ -47,6 +47,9 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			*ret=realloc(ptr, size);
 		}
 		break;
+		case 4: // exec
+			// TODO: exec system call.
+		break;
 		default:
 			// TODO: What to do in case of invalid syscall?
 		break;

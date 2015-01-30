@@ -35,3 +35,8 @@ void *sys_alloc(void *ptr, size_t size)
 	(*sys_syscall)(sys_data, 3, &ret, ptr, size);
 	return ret;
 }
+
+void sys_exec(const char *path, uint32_t argc, char **argv)
+{
+	(*sys_syscall)(sys_data, 4, argc, argv);
+}

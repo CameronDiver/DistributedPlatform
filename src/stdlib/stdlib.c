@@ -47,7 +47,7 @@ void *Dcalloc(size_t nmemb, size_t size)
 	void *ptr=Drealloc(NULL, nmemb*size);
 	if (ptr==NULL)
 		return NULL;
-	memset(ptr, 0, nmemb*size);
+	Dmemset(ptr, 0, nmemb*size);
 	return ptr;
 }
 
