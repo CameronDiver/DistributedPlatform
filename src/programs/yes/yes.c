@@ -19,7 +19,7 @@ int main(unsigned int argc, char **argv) {
 	
 	// Print until killed.
 	while(1)
-		printf("%s\n", str);
+		Dprintf("%s\n", str);
 	
 	return EXIT_SUCCESS;
 }
