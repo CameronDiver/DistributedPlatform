@@ -5,4 +5,6 @@
 
 void *Dmemset(void *s, int c, size_t n);
 
+size_t Dstrlen(const char *s);
+
 #endif
