@@ -5,7 +5,7 @@ CC=clang++
 
 CFLAGS=-Wall
 
-OBJS=dshell.o token.o
+OBJS=dshell.o token.o job.o command.o
 
 EXE=dshell
 

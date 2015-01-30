@@ -1,20 +1,21 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-#include <csdtio>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 
 #include "token.h"
+#include "job.h"
 
 enum ERROR_STATE {
 	NO_ERROR
-}
+};
 
-char *errorStr = NULL;
-ERROR_STATE errorNo = NO_ERROR;
+extern char *errorStr;
+extern ERROR_STATE errorNo;
 
-bool handleCommand(vector<Token> tokens);
+bool handleCommand(std::vector<Token> tokens, std::vector<char *> &jobs);
 
 
 #endif /* COMMAND_H */
