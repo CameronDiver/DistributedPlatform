@@ -37,6 +37,12 @@ cd ./src/programs
 	make
 	cp ./yes.so ../../../container/bin/yes
 	cd ../
+	
+	cd ./rabbits
+	make clean
+	make
+	cp ./rabbits.so ../../../container/bin/rabbits
+	cd ../
 cd ../../
 
 cd ./src/server
