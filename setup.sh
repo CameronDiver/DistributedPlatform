@@ -5,8 +5,6 @@ mkdir -p ./bin
 mkdir -p ./init
 cd ../
 
-cp ./init.so ../../../container/init/init
-
 cd ./src/programs
 	cd ./init
 	make clean
@@ -42,6 +40,12 @@ cd ./src/programs
 	make clean
 	make
 	cp ./rabbits.so ../../../container/bin/rabbits
+	cd ../
+	
+	cd ./args
+	make clean
+	make
+	cp ./args.so ../../../container/bin/args
 	cd ../
 cd ../../
 
