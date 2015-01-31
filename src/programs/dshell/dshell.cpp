@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include "token.h"
+#include "command.h"
 
 #ifndef DSHELL_VERSION
 	#define DSHELL_VERSION 0.1
@@ -29,8 +30,29 @@ int main(int argc, char *argv[]) {
 		std::vector<Token> tokens;
 		tokenize(input, tokens);
 
-		
+		std::vector<char *> jobs;
+		handleCommand(tokens, jobs);
 
+		for(int i = 0; i < jobs.size(); ++i) {
+			//Dprintf("job: %s\n", jobs[i]);
+			Job *proc = Job::jobFromString(jobs[i]);
+			proc->startProcess();
+
+			size_t size = 0;
+			char *output =NULL;
+			int count;
+			while((count = getline(&input, &size, proc->getOutputStream())) != -1) {
+				Dprintf("%s\n", output);
+			}
+		}
+
+
+		// free the tokens
+		for(int i = 0; i < tokens.size(); ++i) {
+			Token t = tokens[i];
+			free(t.str);
+		}
+		// TODO: free the jobs strings
 	}
 	free(input);
 
