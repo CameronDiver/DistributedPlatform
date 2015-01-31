@@ -34,7 +34,16 @@ int main(int argc, char *argv[]) {
 		handleCommand(tokens, jobs);
 
 		for(int i = 0; i < jobs.size(); ++i) {
-			Dprintf("job: %s\n", jobs[i]);
+			//Dprintf("job: %s\n", jobs[i]);
+			Job *proc = Job::jobFromString(jobs[i]);
+			proc->startProcess();
+
+			size_t size = 0;
+			char *output =NULL;
+			int count;
+			while((count = getline(&input, &size, proc->getOutputStream())) != -1) {
+				Dprintf("%s\n", output);
+			}
 		}
 
 

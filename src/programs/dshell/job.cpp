@@ -32,9 +32,22 @@ void Job::addArg(char *arg) {
 void Job::startProcess() {
 	// open the process, setup the read stream, and close the stream
 	// when the process returns
-	stdoutStream = popen(jobName, "re");
+	stdoutStream = popen(jobName, "we");
 }
 
 FILE *Job::getOutputStream() {
 	return stdoutStream;
+}
+
+Job *Job::jobFromString(char *str) {
+	char *exeName = strtok(str, " \n");
+
+	Job *job = new Job(exeName);
+
+	char *arg;
+	while((arg = strtok(NULL, " \n")) != NULL) {
+		job->addArg(arg);
+	}
+
+	return job;
 }

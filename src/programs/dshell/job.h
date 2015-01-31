@@ -17,6 +17,8 @@ class Job {
  	// redirection
  	void startProcess();
 
+ 	static Job *jobFromString(char *str);
+
  	FILE *getOutputStream();
  private:
  	// either the exe or the name of the inbuilt command
