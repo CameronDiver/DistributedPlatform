@@ -16,8 +16,10 @@ class Server {
 	bool run(FS *fs, const char *initPath);
 	
 	ProcessPID processFork(ProcessPID parentPID);
- private:
+	
 	std::vector<Process> procs;
+ 	FS *filesystem;
+ private:
 	
 	ProcessPID processAdd(Process *proc);
 	bool processRun(ProcessPID pid, bool doFork=true, unsigned int argc=0, ...);

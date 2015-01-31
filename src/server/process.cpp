@@ -130,40 +130,49 @@ bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, boo
 }
 
 bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap) {
-	// TODO: Check argc can fit into type.
-
-	// Ensure program is loaded but not running.
-	if (state!=ProcessState::Loaded)
-		return false;
-
-	// Setup argc and argv. Do this before forking in case of error.
-	info.argc=argc+1; // +1 for program name.
-	info.argv=(const char **)malloc(sizeof(char *)*info.argc);
-	if (info.argv==NULL)
+	// Setup argc and argv.
+	++argc; // for program name.
+	char **argv=(char **)malloc(sizeof(char *)*argc);
+	if (argv==NULL)
 		return false;
 	unsigned int i;
 	size_t size=strlen(name)+1;
-	info.argv[0]=(const char *)malloc(sizeof(char)*size);
-	if (info.argv[0]==NULL) {
-		free((void *)info.argv);
-		info.argv=NULL;
+	argv[0]=(char *)malloc(sizeof(char)*size);
+	if (argv[0]==NULL) {
+		free((void *)argv);
 		return false;
 	}
-	memcpy((void *)info.argv[0], (void *)name, size);
-	for(i=1;i<argc+1;++i) {
+	memcpy((void *)argv[0], (void *)name, size);
+	for(i=1;i<argc;++i) {
 		const char *arg=(const char *)va_arg(ap, const char *);
 		size_t size=strlen(arg)+1;
-		info.argv[i]=(const char *)malloc(sizeof(char)*size);
-		if (info.argv[i]==NULL) {
+		argv[i]=(char *)malloc(sizeof(char)*size);
+		if (argv[i]==NULL) {
 			unsigned int j;
 			for(j=0;j<i;++j)
-				free((void *)info.argv[j]);
-			free((void *)info.argv);
-			info.argv=NULL;
+				free((void *)argv[j]);
+			free((void *)argv);
 			return false;
 		}
-		memcpy((void *)info.argv[i], (void *)arg, size);
+		memcpy((void *)argv[i], (void *)arg, size);
 	}
+
+	// Call arun() to do rest of the work.
+	if(this->arun(syscall, syscallData, doFork, argc, (const char **)argv))
+		return true;
+	
+	for(i=0;i<argc;++i)
+		free(argv[i]);
+	free(argv);
+	return false;
+}
+
+bool Process::arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, const char **argv) {
+	// TODO: Check argc can fit into type.
+	
+	// Ensure program is loaded but not running.
+	if (state!=ProcessState::Loaded)
+		return false;
 
 	// Fork to create new process, if desired.
 	pid_t pid=(doFork ? fork() : 0);
@@ -172,6 +181,10 @@ bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 	else if (pid==0) {
 		// Set state to running.
 		state=ProcessState::Running;
+		
+		// Setup argc and argv.
+		info.argc=argc;
+		info.argv=argv;
 		
 		// Setup syscall functor.
 		info.syscall=syscall;

@@ -48,7 +48,29 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		}
 		break;
 		case 4: // exec
-			// TODO: exec system call.
+		{
+			const char *path=(const char *)va_arg(ap, const char *);
+			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
+			char **argv=(char **)va_arg(ap, char **);
+			Process *curr=&data->server->procs[data->pid];
+			
+			// 'Unload' current process.
+			curr->~Process();
+			
+			// Load new file.
+			if (curr->loadFileFS(data->server->filesystem, path))
+			{
+				// Setup system call stuff.
+				ServerSysCallData *syscallData=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
+				if (syscallData!=NULL)
+				{
+					*syscallData=*data;
+				
+					// Run (without forking).
+					curr->arun(&serverSysCall, syscallData, false, argc, (const char **)argv);
+				}
+			}
+		}
 		break;
 		default:
 			// TODO: What to do in case of invalid syscall?
@@ -61,12 +83,17 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 Server::Server(size_t maxRam, size_t maxCores) {
 	Process dummyProc; // To create PID of 1 for init.
 	procs.push_back(dummyProc);
+	
+	filesystem=NULL;
 }
 
 Server::~Server(void) {
 }
 
 bool Server::run(FS *fs, const char *initPath) {
+	// Setup file system.
+	filesystem=fs;
+	
 	// Load init process.
 	Process initProc;
 	if (!initProc.loadFileFS(fs, initPath))
