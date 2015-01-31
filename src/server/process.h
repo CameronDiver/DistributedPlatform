@@ -13,6 +13,7 @@ enum class ProcessState { None, Loaded, Running };
 
 typedef int (*ProcessMain)(unsigned int, const char **);
 typedef void (*ProcessStart)(const void *);
+typedef void (*ProcessRestart)(const void *);
 
 class Process {
  public:
@@ -41,6 +42,7 @@ class Process {
  	}info;
  	void *dlHandle;
 	ProcessStart start;
+	ProcessRestart restart;
 	char *name;
 	char *path;
 	ProcessState state;

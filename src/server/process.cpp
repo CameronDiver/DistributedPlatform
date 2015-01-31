@@ -67,10 +67,11 @@ bool Process::loadFileLocal(const char *gpath) {
 	if (dlHandle==NULL)
 		goto error;
 
-	// Grab main and _start functors.
+	// Grab function pointers.
 	info.main=(ProcessMain)dlsym(dlHandle, "main");
 	start=(ProcessStart)dlsym(dlHandle, "_start");
-	if (info.main==NULL || start==NULL)
+	restart=(ProcessStart)dlsym(dlHandle, "_restart");
+	if (info.main==NULL || start==NULL || restart==NULL)
 		goto error;
 
 	// Allocate memory for name.
@@ -247,16 +248,20 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	if (child->dlHandle==NULL)
 		goto error;
 	
-	// Grab _start and main function pointers.
+	// Grab function pointers.
 	child->info.main=(ProcessMain)dlsym(child->dlHandle, "main");
 	child->start=(ProcessStart)dlsym(child->dlHandle, "_start");
-	if (child->info.main==NULL || child->start==NULL)
+	child->restart=(ProcessRestart)dlsym(child->dlHandle, "_restart");
+	if (child->info.main==NULL || child->start==NULL || child->restart==NULL)
 		goto error;
 	
 	// Simple stuff.
 	info.syscall=syscall;
 	info.syscallData=syscallData;
 	child->state=state;
+	
+	// Restart stdlib as we've changed the info struct.
+	(*child->restart)(&info);
 	
 	return child;
 	

@@ -19,6 +19,7 @@ typedef struct
 ////////////////////////////////////////////////////////////////////////////////
 
 void _start(const void *);
+void _restart(const void *);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public functions.
@@ -93,4 +94,12 @@ void _start(const void *ptr) {
 	
 	// Run main() and exit with return value.
 	Dexit((*info->main)(info->argc, info->argv));
+}
+
+void _restart(const void *ptr) {
+	// Grab info struct.
+	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
+	
+	// Setup standard library.
+	sys_init(info->syscall, info->syscallData);
 }
