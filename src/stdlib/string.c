@@ -15,6 +15,21 @@ size_t Dstrlen(const char *s)	{
 	return len;
 }
 
+char *Dstrcpy(char *dest, const char *src) {
+	while(*src!='\0')
+		*dest++=*src++;
+	return dest;
+}
+
+char *Dstrncpy(char *dest, const char *src, size_t n) {
+	size_t i;
+	for(i=0;i<n && src[i]!='\0';i++)
+		dest[i]=src[i];
+	for(;i<n;i++)
+		dest[i] = '\0';
+	return dest;
+}
+
 void *Dmemcpy(void *dest, const void *src, size_t n) {
 	return Dmemmove(dest, src, n);
 }
