@@ -5,8 +5,9 @@
 #include <cstdlib>
 #include <vector>
 
-#include "token.h"
+#include "common.h"
 #include "job.h"
+#include "token.h"
 
 enum ERROR_STATE {
 	NO_ERROR

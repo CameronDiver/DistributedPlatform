@@ -4,6 +4,8 @@
 #include <sstream>
 #include <vector>
 
+#include "common.h"
+
 typedef struct {
 	char *str;
 	int length;

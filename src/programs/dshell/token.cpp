@@ -26,7 +26,7 @@ bool tokenize(char *input, std::vector<Token> &tokens) {
 	// stringbuilder
 	std::stringstream ss;
 
-	int length = strlen(input);
+	int length = Dstrlen(input);
 	for(int i = 0; i < length; ++i) {
 		// get the current character
 		char c = input[i];
@@ -104,9 +104,9 @@ void addToQueue(std::stringstream &ss, std::vector<Token> &tokens) {
 	if(size > 0) {
 		// add it to the output queue
 		Token t;
-		t.str = (char *)malloc(size);
-		strcpy(t.str, ss.str().c_str());
-		t.length = strlen(t.str);
+		t.str = (char *)Dmalloc(size);
+		Dstrcpy(t.str, ss.str().c_str());
+		t.length = Dstrlen(t.str);
 
 		ss.str("");
 

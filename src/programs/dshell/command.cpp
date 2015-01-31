@@ -21,10 +21,10 @@ bool handleCommand(std::vector<Token> tokens, std::vector<char *> &jobs) {
 				if(t.str[0] == c) {
 					splitter = true;
 					const char *str = ss.str().c_str();
-					int len = strlen(str);
+					int len = Dstrlen(str);
 
-					char *temp = (char *)malloc(len + 1);
-					strcpy(temp, str);
+					char *temp = (char *)Dmalloc(len + 1);
+					Dstrcpy(temp, str);
 
 					jobs.push_back(temp);
 					ss.str("");
@@ -41,10 +41,10 @@ bool handleCommand(std::vector<Token> tokens, std::vector<char *> &jobs) {
 
 	if(strlen(ss.str().c_str()) > 0){
 		const char *str = ss.str().c_str();
-		int len = strlen(str);
+		int len = Dstrlen(str);
 
-		char *temp = (char *)malloc(len + 1);
-		strcpy(temp, str);
+		char *temp = (char *)Dmalloc(len + 1);
+		Dstrcpy(temp, str);
 
 		jobs.push_back(temp);
 	}

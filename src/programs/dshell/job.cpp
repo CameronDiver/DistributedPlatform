@@ -5,26 +5,26 @@
 #include <cstring>
 
 Job::Job(char *name) {
-	jobName = (char *) malloc(strlen(name) + 1);
+	jobName = (char *) Dmalloc(strlen(name) + 1);
 	// TODO: check malloc
-	strcpy(jobName, name);
+	Dstrcpy(jobName, name);
 }
 
 Job::~Job() {
 
 	// go through all the arguments and free them
 	for(int i = 0; i < args.size(); ++i){
-		free(args[i]);
+		Dfree(args[i]);
 	}
 
 	// free the memory reserved for the name
-	free(jobName);
+	Dfree(jobName);
 }
 
 
 void Job::addArg(char *arg) {
-	char *a = (char *)malloc(strlen(arg) + 1);
-	strcpy(a, arg);
+	char *a = (char *)Dmalloc(strlen(arg) + 1);
+	Dstrcpy(a, arg);
 	args.push_back(a);
 }
 
@@ -40,12 +40,12 @@ FILE *Job::getOutputStream() {
 }
 
 Job *Job::jobFromString(char *str) {
-	char *exeName = strtok(str, " \n");
+	char *exeName = Dstrtok(str, " \n");
 
 	Job *job = new Job(exeName);
 
 	char *arg;
-	while((arg = strtok(NULL, " \n")) != NULL) {
+	while((arg = Dstrtok(NULL, " \n")) != NULL) {
 		job->addArg(arg);
 	}
 

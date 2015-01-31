@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <vector>
 
+#include "common.h"
+
 class Job {
 
  public:

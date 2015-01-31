@@ -1,14 +1,13 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "token.h"
 #include "command.h"
+#include "common.h"
+#include "token.h"
 
 #ifndef DSHELL_VERSION
 	#define DSHELL_VERSION 0.1
 #endif
-
-#define Dprintf printf
 
 int main(int argc, char *argv[]) {
 	//setup the environment
@@ -21,7 +20,7 @@ int main(int argc, char *argv[]) {
 	size_t size = 0;
 	char *input = NULL;
 	int count;
-	while((count = getline(&input, &size, stdin)) != -1) {
+	while((count = Dgetline(&input, &size, stdin)) != -1) {
 		// process the input
 		
 		//split the strings up by spaces. 
@@ -41,7 +40,7 @@ int main(int argc, char *argv[]) {
 			size_t size = 0;
 			char *output =NULL;
 			int count;
-			while((count = getline(&input, &size, proc->getOutputStream())) != -1) {
+			while((count = Dgetline(&input, &size, proc->getOutputStream())) != -1) {
 				Dprintf("%s\n", output);
 			}
 		}
@@ -50,11 +49,11 @@ int main(int argc, char *argv[]) {
 		// free the tokens
 		for(int i = 0; i < tokens.size(); ++i) {
 			Token t = tokens[i];
-			free(t.str);
+			Dfree(t.str);
 		}
 		// TODO: free the jobs strings
 	}
-	free(input);
+	Dfree(input);
 
 	return 0;
 }
