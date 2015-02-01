@@ -13,7 +13,7 @@ pid_t Dgetpid(void) {
 
 
 int Dexecl(const char *path, const char *arg, ...) {
-	char **argv=Dmalloc(sizeof(char *));
+	char **argv=Dmalloc(sizeof(char *)*2);
 	if (argv==NULL)
 		goto error;
 	
@@ -25,17 +25,21 @@ int Dexecl(const char *path, const char *arg, ...) {
 	
 	// TODO: Copy other arguments into argv.
 	
+	argv[1]=NULL;
+	
 	int ret=Dexecv(path, argv);
 	
-	Dfree(argv[0]);
+	unsigned int i;
+	for(i=0;argv[i]!=NULL;++i)
+		Dfree(argv[i]);
 	Dfree(argv);
 	
 	return ret;
 	
 	error:
 	if (argv!=NULL) {
-		if (argv[0]!=NULL)
-			Dfree(argv[0]);
+		for(i=0;argv[i]!=NULL;++i)
+			Dfree(argv[i]);
 		Dfree(argv);
 	}
 	return -1;

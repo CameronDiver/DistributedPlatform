@@ -59,14 +59,19 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
 			char **argv=(char **)va_arg(ap, char **);
 			
-			// 'Unload' current process.
-			curr->~Process();
-			
-			// Load new file.
-			if (curr->loadFileFS(server->filesystem, path))
+			// Create and load new process.
+			Process *newProc=new Process;
+			if (newProc->loadFileFS(server->filesystem, path))
 			{
+				// 'Unload' old process.
+				curr->~Process();
+				
+				// Update process array.
+				server->procs[pid]=*newProc;
+				
 				// Run (without forking).
-				curr->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
+				newProc->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
+				exit(EXIT_SUCCESS);
 			}
 		}
 		break;
