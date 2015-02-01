@@ -13,23 +13,49 @@ pid_t Dgetpid(void) {
 
 
 int Dexecl(const char *path, const char *arg, ...) {
-	char **argv=Dmalloc(sizeof(char *)*2);
+	va_list ap;
+	va_start(ap, arg);
+	
+	// Find argc.
+	va_list ap2;
+	va_copy(ap2, ap);
+	const char *nextArg;
+	unsigned int argc=1; // 1 not 0 for default 'arg'.
+	while((nextArg=(const char *)va_arg(ap2, const char *))!=NULL)
+		++argc;
+	va_end(ap2);
+	
+	// Allocate memory for argv.
+	char **argv=Dmalloc(sizeof(char *)*(argc+1));
 	if (argv==NULL)
 		goto error;
 	
+	// Copy first argument.
 	size_t arg0Size=Dstrlen(arg)+1;
 	argv[0]=Dmalloc(arg0Size);
 	if (argv[0]==NULL)
 		goto error;
 	Dmemcpy(argv[0], arg, arg0Size);
 	
-	// TODO: Copy other arguments into argv.
+	// Copy other arguments.
+	unsigned int i;
+	for(i=1;(nextArg=(const char *)va_arg(ap, const char *))!=NULL;++i)
+	{
+		size_t argSize=Dstrlen(nextArg)+1;
+		argv[i]=Dmalloc(argSize);
+		if (argv[i]==NULL)
+			goto error;
+		Dmemcpy(argv[i], nextArg, argSize);
+	}
+	va_end(ap);
 	
-	argv[1]=NULL;
+	// Null terminated list.
+	argv[argc]=NULL;
 	
+	// Call execv to do the rest of the work.
 	int ret=Dexecv(path, argv);
 	
-	unsigned int i;
+	// Clean up.
 	for(i=0;argv[i]!=NULL;++i)
 		Dfree(argv[i]);
 	Dfree(argv);
@@ -42,6 +68,7 @@ int Dexecl(const char *path, const char *arg, ...) {
 			Dfree(argv[i]);
 		Dfree(argv);
 	}
+	va_end(ap);
 	return -1;
 }
 
