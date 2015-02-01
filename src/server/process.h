@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdint>
+#include <unistd.h>
 
 #include "fs.h"
 
@@ -30,6 +31,8 @@ class Process {
  	Process *forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscallData);
  	
  	ProcessState getState(void);
+ 	pid_t getPosixPID(void);
+ 	void setPosixPID(pid_t pid);
  private:
  	struct
  	{
@@ -46,6 +49,7 @@ class Process {
 	char *name;
 	char *path;
 	ProcessState state;
+	pid_t posixPID;
 };
 
 #endif 

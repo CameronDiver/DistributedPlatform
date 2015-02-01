@@ -5,19 +5,25 @@
 
 #include "server.h"
 
-typedef struct
-{
-	Server *server;
-	ProcessPID pid;
-}ServerSysCallData;
-
 extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 {
-	ServerSysCallData *data=(ServerSysCallData *)gdata;
+	// Find pid.
+	Server *server=(Server *)gdata;
+	pid_t posixPID=getpid();
+	ProcessPID pid=ProcessPIDError;
+	unsigned int i;
+	for(i=0;i<server->procs.size();++i)
+		if (server->procs[i].getPosixPID()==posixPID) {
+			pid=i;
+			break;
+		}
+	if (pid==ProcessPIDError)
+		return;
+	Process *curr=&server->procs[pid];
 	
+	// Parse system call.
 	va_list ap;
 	va_start(ap, id);
-	
 	switch(id)
 	{
 		case 0: // exit
@@ -29,13 +35,13 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		case 1: // fork
 		{
 	  	int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			*ret=data->server->processFork(data->pid);
+			*ret=server->processFork(pid);
 	  }
 		break;
 		case 2: // getpid
 	  {
 	  	int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-	  	*ret=data->pid;
+	  	*ret=pid;
 	  }
 		break;
 		case 3: // alloc
@@ -52,23 +58,15 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			const char *path=(const char *)va_arg(ap, const char *);
 			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
 			char **argv=(char **)va_arg(ap, char **);
-			Process *curr=&data->server->procs[data->pid];
 			
 			// 'Unload' current process.
 			curr->~Process();
 			
 			// Load new file.
-			if (curr->loadFileFS(data->server->filesystem, path))
+			if (curr->loadFileFS(server->filesystem, path))
 			{
-				// Setup system call stuff.
-				ServerSysCallData *syscallData=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
-				if (syscallData!=NULL)
-				{
-					*syscallData=*data;
-				
-					// Run (without forking).
-					curr->arun(&serverSysCall, syscallData, false, argc, (const char **)argv);
-				}
+				// Run (without forking).
+				curr->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
 			}
 		}
 		break;
@@ -112,24 +110,14 @@ bool Server::run(FS *fs, const char *initPath) {
 }
 
 ProcessPID Server::processFork(ProcessPID parentPID) {
-	// Child will require own system call data.
-	ServerSysCallData *data=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
-	if (data==NULL)
-		return false;
-	data->server=this;
-	
 	// Create child process.
 	Process *parent=&procs[parentPID];
-	Process *child=parent->forkCopy(&serverSysCall, (void *)data);
+	Process *child=parent->forkCopy(&serverSysCall, (void *)this);
 	if (child==NULL)
-	{
-		free(data);
 		return ProcessPIDError;
-	}
 	
 	// Add child to list of processes.
 	ProcessPID childPID=procs.size();
-	data->pid=childPID;
 	procs.push_back(*child);
 	
 	// Fork.
@@ -141,7 +129,10 @@ ProcessPID Server::processFork(ProcessPID parentPID) {
 		return ProcessPIDError;
 	}
   else if (pid==0)
+  {
+  	procs[childPID].setPosixPID(getpid());
   	return 0; // fork() returns 0 to child.
+  }
   else
   	return childPID; // fork() return child pid to parent.
 }
@@ -161,22 +152,11 @@ ProcessPID Server::processAdd(Process *proc) {
 bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
 	assert(pid>=1 && pid<procs.size());
 	
-	// Allocate syscall data structure.
-	ServerSysCallData *data=(ServerSysCallData *)malloc(sizeof(ServerSysCallData));
-	if (data==NULL)
-		return false;
-	data->server=this;
-	data->pid=pid;
-	
 	// Run process.
 	va_list ap;
 	va_start(ap, argc);
-	bool ret=procs[pid].vrun(&serverSysCall, (void *)data, doFork, argc, ap);
+	bool ret=procs[pid].vrun(&serverSysCall, (void *)this, doFork, argc, ap);
 	va_end(ap);
-	
-	// If process could not be created, no longer need system call data.
-	if (ret==false)
-		free(data);
 	
 	return ret;
 }

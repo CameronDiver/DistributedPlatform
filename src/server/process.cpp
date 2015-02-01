@@ -1,7 +1,6 @@
 #include <dlfcn.h>
 #include <cstdlib>
 #include <cstring>
-#include <unistd.h>
 
 #include "process.h"
 #include "util.h"
@@ -16,6 +15,7 @@ Process::Process(void) {
 	name=NULL;
 	path=NULL;
 	state=ProcessState::None;
+	posixPID=-1;
 }
 
 Process::~Process(void) {
@@ -49,9 +49,9 @@ Process::~Process(void) {
 	
 	// Others.
 	info.syscall=NULL;
-	free(info.syscallData);
 	info.syscallData=NULL;
 	state=ProcessState::None;
+	posixPID=-1;
 }
 
 bool Process::loadFileLocal(const char *gpath) {
@@ -180,8 +180,9 @@ bool Process::arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 	if (pid<0)
 		return false;
 	else if (pid==0) {
-		// Set state to running.
+		// Set state to running and update posixPID.
 		state=ProcessState::Running;
+		posixPID=getpid();
 		
 		// Setup argc and argv.
 		info.argc=argc;
@@ -256,12 +257,12 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 		goto error;
 	
 	// Simple stuff.
-	info.syscall=syscall;
-	info.syscallData=syscallData;
+	child->info.syscall=syscall;
+	child->info.syscallData=syscallData;
 	child->state=state;
 	
 	// Restart stdlib as we've changed the info struct.
-	(*child->restart)(&info);
+	(*child->restart)(&child->info);
 	
 	return child;
 	
@@ -284,4 +285,12 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 ProcessState Process::getState(void)
 {
 	return state;
+}
+
+pid_t Process::getPosixPID(void) {
+	return this->posixPID;
+}
+
+void Process::setPosixPID(pid_t pid) {
+ 	posixPID=pid;
 }
