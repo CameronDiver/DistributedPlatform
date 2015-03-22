@@ -1,6 +1,6 @@
-#include "../../stdlib/stdio.h"
-#include "../../stdlib/stdlib.h"
-#include "../../stdlib/sys.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys.h>
 
 int main(unsigned int argc, char **argv) {
 	// Check we are the init process.

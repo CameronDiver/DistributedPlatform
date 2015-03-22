@@ -1,5 +1,5 @@
-#include "../../stdlib/stdio.h"
-#include "../../stdlib/stdlib.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 int main(unsigned int argc, char **argv) {
 	// Check arguments.

@@ -1,6 +1,6 @@
-#include "../../stdlib/math.h"
-#include "../../stdlib/stdio.h"
-#include "../../stdlib/stdlib.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 int main(unsigned int argc, char **argv) {
 	if (argc<=1)
