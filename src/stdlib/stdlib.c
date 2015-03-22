@@ -5,8 +5,7 @@
 
 typedef int (*ProcessMain)(unsigned int, const char **);
 
-typedef struct
-{	
+typedef struct {
 	uint16_t argc;
 	const char **argv;
 	ProcessMain main;
@@ -25,60 +24,51 @@ void _restart(const void *);
 // Public functions.
 ////////////////////////////////////////////////////////////////////////////////
 
-int Dabs(int x) {
-	return (x>=0 ? x : -x);
+void *__wrap_malloc(size_t size) {
+	return realloc(NULL, size);
 }
 
-void Dexit(int status) {
-	sys_exit(status);
+void __wrap_free(void *ptr) {
+	realloc(ptr, 0);
 }
 
-void *Dmalloc(size_t size)
-{
-	return Drealloc(NULL, size);
-}
-
-void Dfree(void *ptr)
-{
-	Drealloc(ptr, 0);
-}
-
-void *Dcalloc(size_t nmemb, size_t size)
-{
-	void *ptr=Drealloc(NULL, nmemb*size);
+void *__wrap_calloc(size_t nmemb, size_t size) {
+	void *ptr=realloc(NULL, nmemb*size);
 	if (ptr==NULL)
 		return NULL;
-	Dmemset(ptr, 0, nmemb*size);
+	memset(ptr, 0, nmemb*size);
 	return ptr;
 }
 
-void *Drealloc(void *ptr, size_t size)
-{
+void *__wrap_realloc(void *ptr, size_t size) {
 	return sys_alloc(ptr, size);
 }
 
-int Datoi(const char *nptr)
-{
-	return Datoll(nptr);
+void __wrap_abort(void) {
+	// TODO: abort properly.
+	exit(EXIT_FAILURE);
 }
 
-long Datol(const char *nptr)
-{
-	return Datoll(nptr);
+int __wrap_atexit(void (*func)(void)) {
+	// TODO: this
+	return -1;
 }
 
-long long Datoll(const char *nptr)
-{
-	long long ret=0;
-	for(;*nptr;nptr++) {
-	 ret=10*ret+(*nptr-'0');
-	}
-	return ret;
+void __wrap_exit(int status) {
+	// TODO: Exit - call atexit functions.
+	// TODO: Exit - Close (and potentially flush) streams open with stdio.
+	// TODO: Exit - remove files created by tmpfile.
+	sys_exit(status);
 }
 
-long long Datoq(const char *nptr)
-{
-	return Datoll(nptr);
+char *__wrap_getenv(const char* name) {
+	// TODO: this
+	return NULL;
+}
+
+int __wrap_system(const char* command) {
+	// TODO: this
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -93,7 +83,7 @@ void _start(const void *ptr) {
 	sys_init(info->syscall, info->syscallData);
 	
 	// Run main() and exit with return value.
-	Dexit((*info->main)(info->argc, info->argv));
+	exit((*info->main)(info->argc, info->argv));
 }
 
 void _restart(const void *ptr) {

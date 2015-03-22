@@ -1,7 +1,6 @@
 #include "../../stdlib/math.h"
 #include "../../stdlib/stdio.h"
 #include "../../stdlib/stdlib.h"
-#include "../../stdlib/unistd.h"
 
 int main(unsigned int argc, char **argv) {
 	if (argc<=1)
@@ -13,7 +12,7 @@ int main(unsigned int argc, char **argv) {
 	int i;
 	for(i=1;i<argc;++i)
 	{
-		unsigned long long int n=Datoll(argv[i]);
+		unsigned long long int n=atoll(argv[i]);
 		Dprintf("%llu:", n);
 		
 		// Special case.
@@ -24,7 +23,7 @@ int main(unsigned int argc, char **argv) {
 		}
 		
 		// Simple trial division.
-		unsigned long long int sqrtn=Dsqrt(n);
+		unsigned long long int sqrtn=sqrt(n);
 		unsigned long long int d;
 		for(d=2;d<=sqrtn;++d)
 		{
@@ -37,7 +36,7 @@ int main(unsigned int argc, char **argv) {
 				
 				// Update n and sqrt n.
 				n=q;
-				sqrtn=Dsqrt(n);
+				sqrtn=sqrt(n);
 				
 			  // Test this value of d, again may be another factor.
 				--d;

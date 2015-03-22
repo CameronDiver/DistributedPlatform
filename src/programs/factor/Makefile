@@ -1,16 +1,15 @@
-CC=gcc
+CC=../../dcc
 
-CFLAGS=-Wall -nostdlib -lgcc -nostartfiles -ffreestanding -fpic
-LFLAGS=-shared
+CFLAGS=-Wall
 
-OBJS=factor.o ../../stdlib/stdio.o ../../stdlib/stdlib.o ../../stdlib/unistd.o ../../stdlib/syscall.o ../../stdlib/string.o ../../stdlib/math.o
+OBJS=factor.o ../../stdlib/syscall.o ../../stdlib/stdio.o ../../stdlib/stdlib.o ../../stdlib/math.o
 
 EXE=factor.so
 
 ALL: $(EXE)
 
 $(EXE): $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OBJS) -o $(EXE)
+	$(CC) $(CFLAGS) $(OBJS) -o $(EXE)
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@

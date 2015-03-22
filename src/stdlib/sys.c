@@ -1,18 +1,17 @@
 #include "stdlib.h"
 #include "string.h"
+#include "sys.h"
 #include "syscall.h"
-#include "unistd.h"
 
-pid_t Dfork(void) {
+pid_t __wrap_fork(void) {
 	return sys_fork();
 }
 
-pid_t Dgetpid(void) {
+pid_t __wrap_getpid(void) {
 	return sys_getpid();
 }
 
-
-int Dexecl(const char *path, const char *arg, ...) {
+int __wrap_execl(const char *path, const char *arg, ...) {
 	va_list ap;
 	va_start(ap, arg);
 	
@@ -26,26 +25,26 @@ int Dexecl(const char *path, const char *arg, ...) {
 	va_end(ap2);
 	
 	// Allocate memory for argv.
-	char **argv=Dmalloc(sizeof(char *)*(argc+1));
+	char **argv=malloc(sizeof(char *)*(argc+1));
 	if (argv==NULL)
 		goto error;
 	
 	// Copy first argument.
-	size_t arg0Size=Dstrlen(arg)+1;
-	argv[0]=Dmalloc(arg0Size);
+	size_t arg0Size=strlen(arg)+1;
+	argv[0]=malloc(arg0Size);
 	if (argv[0]==NULL)
 		goto error;
-	Dmemcpy(argv[0], arg, arg0Size);
+	memcpy(argv[0], arg, arg0Size);
 	
 	// Copy other arguments.
 	unsigned int i;
 	for(i=1;(nextArg=(const char *)va_arg(ap, const char *))!=NULL;++i)
 	{
-		size_t argSize=Dstrlen(nextArg)+1;
-		argv[i]=Dmalloc(argSize);
+		size_t argSize=strlen(nextArg)+1;
+		argv[i]=malloc(argSize);
 		if (argv[i]==NULL)
 			goto error;
-		Dmemcpy(argv[i], nextArg, argSize);
+		memcpy(argv[i], nextArg, argSize);
 	}
 	va_end(ap);
 	
@@ -53,32 +52,32 @@ int Dexecl(const char *path, const char *arg, ...) {
 	argv[argc]=NULL;
 	
 	// Call execv to do the rest of the work.
-	int ret=Dexecv(path, argv);
+	int ret=execv(path, argv);
 	
 	// Clean up.
 	for(i=0;argv[i]!=NULL;++i)
-		Dfree(argv[i]);
-	Dfree(argv);
+		free(argv[i]);
+	free(argv);
 	
 	return ret;
 	
 	error:
 	if (argv!=NULL) {
 		for(i=0;argv[i]!=NULL;++i)
-			Dfree(argv[i]);
-		Dfree(argv);
+			free(argv[i]);
+		free(argv);
 	}
 	va_end(ap);
 	return -1;
 }
 
-int Dexecv(const char *path, char *const gargv[]) {
+int __wrap_execv(const char *path, char *const gargv[]) {
 	// Find argc.
 	uint32_t argc;
 	for(argc=0;gargv[argc]!=NULL;++argc) ;
 	
 	// Allocate argv.
-	char **argv=Dmalloc(sizeof(char *)*argc);
+	char **argv=malloc(sizeof(char *)*argc);
 	if (argv==NULL)
 		return -1;
 	
@@ -86,17 +85,17 @@ int Dexecv(const char *path, char *const gargv[]) {
 	unsigned int i;
 	for(i=0;i<argc;++i)
 	{
-		size_t argSize=Dstrlen(gargv[i])+1;
-		argv[i]=Dmalloc(argSize);
+		size_t argSize=strlen(gargv[i])+1;
+		argv[i]=malloc(argSize);
 		if (argv[i]==NULL)
 		{
 			unsigned int j;
 			for(j=0;j<i;++j)
-				Dfree(argv[j]);
-			Dfree(argv);
+				free(argv[j]);
+			free(argv);
 			return -1;
 		}
-		Dmemcpy(argv[i], gargv[i], argSize);
+		memcpy(argv[i], gargv[i], argSize);
 	}
 	
 	// Use system call to replace process.
