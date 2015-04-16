@@ -43,8 +43,8 @@ Process::~Process(void) {
 	
 	// Path.
 	if (path!=NULL) {
-		free(name);
-		name=NULL;
+		free(path);
+		path=NULL;
 	}
 	
 	// Others.
