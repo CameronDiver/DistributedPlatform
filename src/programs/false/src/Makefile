@@ -9,6 +9,7 @@ EXE=../bin/false
 ALL: $(EXE)
 
 $(EXE): $(OBJS)
+	mkdir -p ../bin
 	$(CC) $(CFLAGS) $(OBJS) -o $(EXE)
 
 %.o: %.cpp

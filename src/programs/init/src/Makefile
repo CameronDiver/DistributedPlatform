@@ -9,6 +9,7 @@ EXE=../bin/init
 ALL: $(EXE)
 
 $(EXE): $(OBJS)
+	mkdir -p ../bin
 	$(CC) $(CFLAGS) $(OBJS) -o $(EXE)
 
 %.o: %.cpp
