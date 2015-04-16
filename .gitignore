@@ -2,3 +2,5 @@
 boot
 # Container
 container
+# Log file
+distlog

@@ -1,18 +1,20 @@
 #include <cstdlib>
-#include <iostream>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "fsdirect.h"
+#include "log.h"
 #include "server.h"
 
 void startDaemon(void) {
 	// Fork the parent process.
 	pid_t pid = fork();
-	if (pid < 0)
+	if (pid < 0) {
+		log(LogLevelCrit, "Error: Could not fork to init daemon (first time).\n");
 		exit(EXIT_FAILURE);
+	}
 
 	// Success; terminate the parent.
 	if (pid > 0)
@@ -29,8 +31,10 @@ void startDaemon(void) {
 
 	// Fork off for the second time.
 	pid = fork();
-	if (pid < 0)
+	if (pid < 0) {
+		log(LogLevelCrit, "Error: Could not fork to init daemon (second time).\n");
 		exit(EXIT_FAILURE);
+	}
 
 	// Success; terminate the parent.
 	if (pid > 0)
@@ -44,7 +48,7 @@ void startDaemon(void) {
 	//chdir("/");
 	// We don't want this overwriting things during the
 	// testing phase - c
-	chdir("/tmp");
+	//chdir("/tmp");
 
 	// Close all open file descriptors.
 	int x;
@@ -52,23 +56,28 @@ void startDaemon(void) {
 		close(x);
 }
 
-int main() {
+int main(int argc, char **argv) {
+	log(LogLevelInfo, "----------------------------------------------------\n");
+	log(LogLevelInfo, "Starting up.\n");
+
 	// Become a daemon (fork etc.).
 	// Currently disabled to allow easy viewing of output.
 	// startDaemon();
+	// log(LogLevelInfo, "Became a daemon.\n");
 
 	// Load file system which server will 'boot' from.
 	const char *containerPath="./container";
 	FSDirect fs;
 	if (!fs.mountFile(containerPath)) {
-		std::cout << "Error: Could not load container '" << containerPath << "'." << std::endl;
+		log(LogLevelCrit, "Error: Could not load container '%s'.\n", containerPath);
 		exit(EXIT_FAILURE);
 	}
+	log(LogLevelInfo, "Loaded container filesystem.\n");
 
 	// Create server instance and run init program.
 	Server server(128*1024*1024, 1);
 	if (!server.run(&fs, "sys/init")) {
-		std::cout << "Error: Could not run server." << std::endl;
+		log(LogLevelCrit, "Error: Could not run server.\n");
 		exit(EXIT_FAILURE);
 	}
 
