@@ -1,8 +1,8 @@
 # Files to be ignored by git
 
+# Executable files
+*/bin/*
 # Object files
 *.o
-# Executables
-*.so
 # Backup files
 *~

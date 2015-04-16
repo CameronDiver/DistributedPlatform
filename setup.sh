@@ -2,51 +2,58 @@
 mkdir -p ./container
 cd ./container
 mkdir -p ./bin
-mkdir -p ./init
+mkdir -p ./sys
 cd ../
 
 cd ./src/programs
-	cd ./init
+	cd ./init/src
 	make clean
 	make
-	cp ./init.so ../../../container/init/init
-	cd ../
+	cd ../bin
+	cp ./init ../../../../container/sys
+	cd ../../
 
-	cd  ./factor
+	cd  ./factor/src
 	make clean
 	make
-	cp ./factor.so ../../../container/bin/factor
-	cd ../
+	cd ../bin
+	cp ./factor ../../../../container/bin
+	cd ../../
 	
-	cd ./true
+	cd ./true/src
 	make clean
 	make
-	cp ./true.so ../../../container/bin/true
-	cd ../
+	cd ../bin
+	cp ./true ../../../../container/bin
+	cd ../../
 	
-	cd ./false
+	cd ./false/src
 	make clean
 	make
-	cp ./false.so ../../../container/bin/false
-	cd ../
+	cd ../bin
+	cp ./false ../../../../container/bin
+	cd ../../
 	
-	cd ./yes
+	cd ./yes/src
 	make clean
 	make
-	cp ./yes.so ../../../container/bin/yes
-	cd ../
+	cd ../bin
+	cp ./yes ../../../../container/bin
+	cd ../../
 	
-	cd ./rabbits
+	cd ./rabbits/src
 	make clean
 	make
-	cp ./rabbits.so ../../../container/bin/rabbits
-	cd ../
+	cd ../bin
+	cp ./rabbits ../../../../container/bin
+	cd ../../
 	
-	cd ./args
+	cd ./args/src
 	make clean
 	make
-	cp ./args.so ../../../container/bin/args
-	cd ../
+	cd ../bin
+	cp ./args ../../../../container/bin
+	cd ../../
 cd ../../
 
 cd ./src/server

@@ -1,10 +1,10 @@
-CC=../../dcc
+CC=../../../dcc
 
 CFLAGS=-Wall
 
-OBJS=true.o ../../stdlib/syscall.o ../../stdlib/stdlib.o
+OBJS=yes.o ../../../stdlib/syscall.o ../../../stdlib/stdio.o ../../../stdlib/stdlib.o
 
-EXE=true.so
+EXE=../bin/yes
 
 ALL: $(EXE)
 

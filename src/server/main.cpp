@@ -67,7 +67,7 @@ int main() {
 
 	// Create server instance and run init program.
 	Server server(128*1024*1024, 1);
-	if (!server.run(&fs, "init/init")) {
+	if (!server.run(&fs, "sys/init")) {
 		std::cout << "Error: Could not run server." << std::endl;
 		exit(EXIT_FAILURE);
 	}

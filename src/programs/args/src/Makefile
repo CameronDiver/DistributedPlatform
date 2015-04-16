@@ -1,10 +1,10 @@
-CC=../../dcc
+CC=../../../dcc
 
 CFLAGS=-Wall
 
-OBJS=args.o ../../stdlib/syscall.o ../../stdlib/stdio.o ../../stdlib/stdlib.o ../../stdlib/sys.o
+OBJS=args.o ../../../stdlib/syscall.o ../../../stdlib/stdio.o ../../../stdlib/stdlib.o ../../../stdlib/sys.o
 
-EXE=args.so
+EXE=../bin/args
 
 ALL: $(EXE)
 

@@ -1,10 +1,10 @@
-CC=../../dcc
+CC=../../../dcc
 
 CFLAGS=-Wall
 
-OBJS=factor.o ../../stdlib/syscall.o ../../stdlib/stdio.o ../../stdlib/stdlib.o ../../stdlib/math.o
+OBJS=rabbits.o ../../../stdlib/syscall.o ../../../stdlib/stdlib.o ../../../stdlib/sys.o
 
-EXE=factor.so
+EXE=../bin/rabbits
 
 ALL: $(EXE)
 
