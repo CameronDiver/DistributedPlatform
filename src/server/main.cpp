@@ -61,9 +61,8 @@ int main(int argc, char **argv) {
 	log(LogLevelInfo, "Starting up.\n");
 
 	// Become a daemon (fork etc.).
-	// Currently disabled to allow easy viewing of output.
-	// startDaemon();
-	// log(LogLevelInfo, "Became a daemon.\n");
+	startDaemon();
+	log(LogLevelInfo, "Became a daemon.\n");
 
 	// Load file system which server will 'boot' from.
 	const char *containerPath="./container";
