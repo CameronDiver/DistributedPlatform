@@ -3,14 +3,17 @@
 
 #include <cstdarg>
 #include <cstddef>
+#include <list>
+#include <netinet/in.h>
 #include <vector>
 
+#include "connection.h"
 #include "fs.h"
 #include "process.h"
 
 class Server {
  public:
-	Server(size_t maxRam=128*1024*1024, size_t maxCores=1);
+	Server(int port=-1);
 	~Server(void);
 
 	bool run(FS *fs, const char *initPath);
@@ -19,10 +22,17 @@ class Server {
 	
 	std::vector<Process> procs;
  	FS *filesystem;
+
  private:
-	
+ 	std::list <Connection> connections;
+ 	int tcpSockFd, tcpPort;
+
 	ProcessPID processAdd(Process *proc);
 	bool processRun(ProcessPID pid, bool doFork=true, unsigned int argc=0, ...);
+	bool tcpListen(int port); // Begin listening for other devices over TCP.
+	void tcpClose(void);
+	void tcpPoll(void);
+	bool tcpRead(Connection *con);
 };
 
 #endif 

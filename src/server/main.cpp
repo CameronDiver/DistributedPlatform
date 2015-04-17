@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 	log(LogLevelInfo, "Loaded container filesystem.\n");
 
 	// Create server instance and run init program.
-	Server server(128*1024*1024, 1);
+	Server server(51717);
 	if (!server.run(&fs, "sys/init")) {
 		log(LogLevelCrit, "Error: Could not run server.\n");
 		exit(EXIT_FAILURE);

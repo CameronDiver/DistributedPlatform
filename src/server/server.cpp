@@ -1,8 +1,17 @@
+#include <arpa/inet.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <netdb.h>
+#include "net/sockettcp.h"
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 
+#include "log.h"
 #include "server.h"
 
 extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
@@ -83,14 +92,17 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 	va_end(ap);
 }
 
-Server::Server(size_t maxRam, size_t maxCores) {
+Server::Server(int port) {
 	Process dummyProc; // To create PID of 1 for init.
 	procs.push_back(dummyProc);
 	
+	tcpPort=port;
+	tcpSockFd=-1;
 	filesystem=NULL;
 }
 
 Server::~Server(void) {
+	Server::tcpClose();
 }
 
 bool Server::run(FS *fs, const char *initPath) {
@@ -107,9 +119,16 @@ bool Server::run(FS *fs, const char *initPath) {
 	if (initPID==ProcessPIDError)
 		return false;
 	
-	// Run (without forking, so blocking).
-	if (!this->processRun(initPID, false))
+	// Run init process (forking, so non-blocking).
+	if (!this->processRun(initPID, true))
 		return false;
+
+	// Setup TCP socket for listening.
+	if (!this->tcpListen(tcpPort))
+		return false;
+
+	// Check for any new TCP activity (infinite loop).
+	this->tcpPoll();
 
 	return true;
 }
@@ -164,4 +183,108 @@ bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
 	va_end(ap);
 	
 	return ret;
+}
+
+bool Server::tcpListen(int port) {
+	tcpSockFd=socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (tcpSockFd<0)
+		return false;
+
+	struct sockaddr_in servAddr;
+	memset(&servAddr, 0, sizeof(servAddr));
+
+	servAddr.sin_family=AF_INET;
+	servAddr.sin_addr.s_addr=INADDR_ANY;
+	servAddr.sin_port=htons(port);
+	if (bind(tcpSockFd, (struct sockaddr *) &servAddr, sizeof(servAddr))<0)
+		return false;
+
+	return (listen(tcpSockFd,5)==0);
+}
+
+void Server::tcpClose(void) {
+	if (tcpSockFd!=-1) {
+		close(tcpSockFd);
+		tcpSockFd=-1;
+	}
+}
+
+void Server::tcpPoll(void) {
+	fd_set fdSetActive, fdSetRead;
+	FD_ZERO(&fdSetActive);
+	FD_SET(tcpSockFd, &fdSetActive);
+
+	while(1) {
+		// Block until input arrives on one or more active sockets.
+		fdSetRead=fdSetActive;
+		if (select(FD_SETSIZE, &fdSetRead, NULL, NULL, NULL)<0)
+			break;
+
+		// Check for new connect requests.
+		if (FD_ISSET(tcpSockFd, &fdSetRead)) {
+			struct sockaddr_in addr;
+			socklen_t addrLen=sizeof(addr);
+			int newFd=accept(tcpSockFd, (struct sockaddr *)&addr, &addrLen);
+
+			if (newFd>=0) {
+				// Success, add to list of connections.
+				SocketTcp *socket=new SocketTcp();
+				socket->listen(&addr, addrLen, newFd);
+				connections.push_back(Connection(socket));
+				FD_SET(newFd, &fdSetActive);
+				log(LogLevelInfo, "New connection from host %s, port %u.\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+			}
+		}
+
+		// Check for data from TCP clients.
+		std::list<Connection>::iterator iter;
+		for(iter=connections.begin();iter!=connections.end();) {
+			SocketTcp *sockTcp;
+			int clientFd;
+
+			// We are only looking for TCP sockets.
+			if (iter->sock->type!=Socket::TypeTcp)
+				goto next;
+
+			// Check for activity;
+			sockTcp=dynamic_cast<SocketTcp *>(iter->sock);
+			clientFd=sockTcp->sockFd;
+			if (!FD_ISSET(clientFd, &fdSetRead))
+				goto next;
+
+			// Read the data we have received.
+			if (this->tcpRead(&*iter))
+				goto next;
+
+			// Error.
+			log(LogLevelInfo, "TCP client disconnected.\n");
+
+			// Close connection.
+			close(clientFd);
+
+			// Remove from connections list.
+			iter=connections.erase(iter);
+
+			// Clear active flag.
+			FD_CLR(clientFd, &fdSetActive);
+
+			// Advance to next connection.
+			next:
+			++iter;
+		}
+	}
+}
+
+bool Server::tcpRead(Connection *con) {
+	SocketTcp *sockTcp=dynamic_cast<SocketTcp *>(con->sock);
+	int fd=sockTcp->sockFd;
+
+	char buffer[1024];
+	int nbytes=read(fd, buffer, 1024);
+	if (nbytes<=0)
+		return false; // EOF or error.
+
+	log(LogLevelInfo, "Received message: '%s'.\n", buffer);
+
+	return true;
 }
