@@ -93,8 +93,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 }
 
 Server::Server(int port) {
-	Process dummyProc; // To create PID of 1 for init.
-	procs.push_back(dummyProc);
+	procs.push_back(Process()); // To create PID of 1 for init.
 	
 	tcpPort=port;
 	tcpSockFd=-1;
