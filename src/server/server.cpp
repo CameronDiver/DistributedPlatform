@@ -118,7 +118,7 @@ bool Server::run(FS *fs, const char *initPath) {
 		log(LogLevelInfo, "Loaded init process.\n");
 	
 	// Add to list of processes.
-	ProcessPID initPID=Server::processAdd(&initProc);
+	ProcessPID initPID=this->processAdd(&initProc);
 	if (initPID==ProcessPIDError) {
 		log(LogLevelCrit, "Could not add init process to list.\n");
 		return false;
