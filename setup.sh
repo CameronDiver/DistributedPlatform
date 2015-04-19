@@ -54,6 +54,13 @@ cd ./src/programs
 	cd ../bin
 	cp ./args ../../../../container/bin
 	cd ../../
+
+	cd ./printenv/src
+	make clean
+	make
+	cd ../bin
+	cp ./printenv ../../../../container/bin
+	cd ../../
 cd ../../
 
 cd ./src/server
