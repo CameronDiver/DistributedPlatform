@@ -4,8 +4,14 @@
 mkdir -p ./container
 cd ./container
 	mkdir -p ./bin
+	mkdir -p ./home
 	mkdir -p ./sys
 cd ../
+
+# Copy default profile script.
+cd ./src/misc
+	cp profile ../../container/home/.profile
+cd ../../
 
 # Copy programs.
 cd ./src/programs
