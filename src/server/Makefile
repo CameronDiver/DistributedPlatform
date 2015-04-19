@@ -1,7 +1,7 @@
 CC=clang++
 
 CPPFLAGS=-Wall -std=c++11
-LFLAGS=-ldl
+LFLAGS=-ldl -lsqlite3
 
 OBJS=fs.o fsdirect.o process.o main.o server.o util.o connection.o net/socket.o net/sockettcp.o log.o
 

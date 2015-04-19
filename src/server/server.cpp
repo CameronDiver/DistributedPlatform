@@ -14,6 +14,11 @@
 #include "log.h"
 #include "server.h"
 
+static int callbackInc(void *user, int argc, char **argv, char **azColName){
+   (*((int *)user))++;
+   return 0;
+}
+
 extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 {
 	// Find pid.
@@ -98,15 +103,25 @@ Server::Server(int port) {
 	tcpPort=port;
 	tcpSockFd=-1;
 	filesystem=NULL;
+	database=NULL;
 }
 
 Server::~Server(void) {
 	Server::tcpClose();
+
+	sqlite3_close(database);
+	database=NULL;
 }
 
 bool Server::run(FS *fs, const char *initPath) {
 	// Setup file system.
 	filesystem=fs;
+
+	// Load database.
+	if (!this->databaseLoad())
+		log(LogLevelWarning, "Could not load database.\n");
+	else
+		log(LogLevelInfo, "Loaded database.\n");
 	
 	// Load init process.
 	Process initProc;
@@ -174,6 +189,38 @@ ProcessPID Server::processFork(ProcessPID parentPID) {
   }
   else
   	return childPID; // fork() return child pid to parent.
+}
+
+bool Server::databaseLoad(void) {
+	// Attempt to open/create database.
+	char *localPath=filesystem->fileLocalPath(pathDatabase);
+	int ret=sqlite3_open_v2(localPath, &database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+	free(localPath);
+	if (ret) {
+		log(LogLevelWarning, "Could not open database at '%s': %s\n", pathDatabase, sqlite3_errmsg(database));
+		database=NULL;
+		return false;
+	}
+
+	// Create DEVICES table if needed.
+	char *err=NULL;
+	int results=0;
+	ret=sqlite3_exec(database, "SELECT name FROM sqlite_master WHERE type='table' AND name='DEVICES';", callbackInc, &results, &err);
+	if (results==0) {
+		log(LogLevelInfo, "No table 'DEVICES' found - creating.\n");
+		ret=sqlite3_exec(database, "CREATE TABLE DEVICES(ID INT PRIMARY KEY NOT NULL, NAME TEXT NOT NULL);", NULL, NULL, &err);
+
+		if (ret!=SQLITE_OK) {
+			log(LogLevelWarning, "Could not create table 'DEVICES': %s\n", err);
+			sqlite3_free(err);
+			sqlite3_close(database);
+			database=NULL;
+			return false;
+		}else
+			log(LogLevelInfo, "Created table 'DEVICES'.\n");
+	}
+
+	return true;
 }
 
 ProcessPID Server::processAdd(Process *proc) {

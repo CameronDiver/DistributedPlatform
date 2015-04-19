@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <list>
 #include <netinet/in.h>
+#include <sqlite3.h>
 #include <vector>
 
 #include "connection.h"
@@ -24,9 +25,13 @@ class Server {
  	FS *filesystem;
 
  private:
- 	std::list <Connection> connections;
- 	int tcpSockFd, tcpPort;
+ 	const char *pathDatabase="sys/database.db";
 
+	std::list <Connection> connections;
+	int tcpSockFd, tcpPort;
+	sqlite3 *database;
+
+	bool databaseLoad(void);
 	ProcessPID processAdd(Process *proc);
 	bool processRun(ProcessPID pid, bool doFork=true, unsigned int argc=0, ...);
 	bool tcpListen(int port); // Begin listening for other devices over TCP.
