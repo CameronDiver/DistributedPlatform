@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 	const char *containerPath="./container";
 	FSDirect fs;
 	if (!fs.mountFile(containerPath)) {
-		log(LogLevelCrit, "Error: Could not load container '%s'.\n", containerPath);
+		log(LogLevelCrit, "Could not load container '%s'.\n", containerPath);
 		exit(EXIT_FAILURE);
 	}
 	log(LogLevelInfo, "Loaded container filesystem.\n");
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 	// Create server instance and run init program.
 	Server server(51717);
 	if (!server.run(&fs, "sys/init")) {
-		log(LogLevelCrit, "Error: Could not run server.\n");
+		log(LogLevelCrit, "Could not run server.\n");
 		exit(EXIT_FAILURE);
 	}
 

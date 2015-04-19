@@ -110,21 +110,37 @@ bool Server::run(FS *fs, const char *initPath) {
 	
 	// Load init process.
 	Process initProc;
-	if (!initProc.loadFileFS(fs, initPath))
+	if (!initProc.loadFileFS(fs, initPath)) {
+		log(LogLevelCrit, "Could not load init process at '%s'.\n", initPath);
 		return false;
+	}
+	else
+		log(LogLevelInfo, "Loaded init process.\n");
 	
 	// Add to list of processes.
 	ProcessPID initPID=Server::processAdd(&initProc);
-	if (initPID==ProcessPIDError)
+	if (initPID==ProcessPIDError) {
+		log(LogLevelCrit, "Could not add init process to list.\n");
 		return false;
-	
+	}
+	else
+		log(LogLevelInfo, "Added init process.\n");
+
 	// Run init process (forking, so non-blocking).
-	if (!this->processRun(initPID, true))
+	if (!this->processRun(initPID, true)) {
+		log(LogLevelCrit, "Could not run init process.\n");
 		return false;
+	}
+	else
+		log(LogLevelInfo, "Ran init process.\n");
 
 	// Setup TCP socket for listening.
-	if (!this->tcpListen(tcpPort))
-		return false;
+	if (tcpPort>=0) {
+		if (!this->tcpListen(tcpPort))
+			log(LogLevelWarning, "Could not setup TCP socket for listening on port %u\n", tcpPort);
+		else
+			log(LogLevelInfo, "Setup TCP socket for listening on port %u.\n", tcpPort);
+	}
 
 	// Check for any new TCP activity (infinite loop).
 	this->tcpPoll();
