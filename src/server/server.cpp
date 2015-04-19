@@ -225,6 +225,10 @@ void Server::tcpClose(void) {
 }
 
 void Server::tcpPoll(void) {
+	// Check we are actually listening.
+	if (tcpSockFd<0)
+		return;
+
 	fd_set fdSetActive, fdSetRead;
 	FD_ZERO(&fdSetActive);
 	FD_SET(tcpSockFd, &fdSetActive);
