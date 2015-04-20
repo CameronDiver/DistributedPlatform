@@ -12,7 +12,7 @@ const ProcessPID ProcessPIDError=-1;
 
 enum class ProcessState { None, Loaded, Running };
 
-typedef int (*ProcessMain)(unsigned int, const char **);
+typedef int (*ProcessMain)(int, const char **);
 typedef void (*ProcessStart)(const void *);
 typedef void (*ProcessRestart)(const void *);
 
@@ -37,7 +37,7 @@ class Process {
  	struct
  	{
  		//TODO: Do we need a version number of sorts (to ensure stdlib version of this struct matches)?
-		uint16_t argc;
+		int32_t argc;
 		const char **argv; // TODO: Static assert that sizeof(char)==1?
 		ProcessMain main;
 		void (*syscall)(void *, uint32_t, ...);

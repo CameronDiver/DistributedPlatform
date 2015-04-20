@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <sys.h>
 
-int main(unsigned int argc, char **argv) {
+int main(int argc, char **argv) {
 	// Check we are the init process.
 	pid_t pid=getpid();
 	if (pid!=1)

@@ -3,10 +3,10 @@
 #include "string.h"
 #include "syscall.h"
 
-typedef int (*ProcessMain)(unsigned int, const char **);
+typedef int (*ProcessMain)(int, const char **);
 
 typedef struct {
-	uint16_t argc;
+	int32_t argc;
 	const char **argv;
 	ProcessMain main;
   void (*syscall)(void *, uint32_t, ...);
