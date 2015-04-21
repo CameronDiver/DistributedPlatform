@@ -48,9 +48,9 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		break;
 		case 1: // fork
 		{
-	  	int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
 			*ret=server->processFork(pid);
-	  }
+		}
 		break;
 		case 2: // getpid
 	  {
