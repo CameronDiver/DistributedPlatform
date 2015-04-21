@@ -70,7 +70,7 @@ char *__wrap_getenv(const char* name) {
 	size_t nameLen=strlen(name);
 	char **ptr;
 	for(ptr=Denviron;*ptr!=NULL;++ptr)
-		if (!strncmp(*ptr, name, nameLen) && *ptr[nameLen]=='=')
+		if (strncmp(*ptr, name, nameLen)==0 && (*ptr)[nameLen]=='=')
 			return (*ptr)+nameLen+1;
 	return NULL;
 }
