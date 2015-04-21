@@ -3,6 +3,8 @@
 #include "string.h"
 #include "syscall.h"
 
+char **Denviron=NULL;
+
 typedef int (*ProcessMain)(int, const char **);
 
 typedef struct {
@@ -62,7 +64,14 @@ void __wrap_exit(int status) {
 }
 
 char *__wrap_getenv(const char* name) {
-	// TODO: this
+	if (Denviron==NULL)
+		return NULL;
+
+	size_t nameLen=strlen(name);
+	char **ptr;
+	for(ptr=Denviron;*ptr!=NULL;++ptr)
+		if (!strncmp(*ptr, name, nameLen) && *ptr[nameLen]=='=')
+			return (*ptr)+nameLen+1;
 	return NULL;
 }
 
@@ -80,6 +89,7 @@ void _start(const void *ptr) {
 	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
 	
 	// Setup standard library.
+	Denviron=NULL;
 	sys_init(info->syscall, info->syscallData);
 	
 	// Run main() and exit with return value.
@@ -91,5 +101,6 @@ void _restart(const void *ptr) {
 	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
 	
 	// Setup standard library.
+	Denviron=NULL;
 	sys_init(info->syscall, info->syscallData);
 }
