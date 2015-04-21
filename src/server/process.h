@@ -23,7 +23,10 @@ class Process {
  	
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 	bool loadFileFS(FS *fs, const char *path);
-	
+
+	const char **getEnviron(void);
+	bool setEnviron(const char **env);
+
  	bool run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc=0, ...);
  	bool vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap);
  	bool arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, const char **argv);
@@ -42,6 +45,7 @@ class Process {
 		ProcessMain main;
 		void (*syscall)(void *, uint32_t, ...);
 		void *syscallData;
+		char **environ;
  	}info;
  	void *dlHandle;
 	ProcessStart start;
@@ -50,6 +54,7 @@ class Process {
 	char *path;
 	ProcessState state;
 	pid_t posixPID;
+	char **environ;
 };
 
 #endif 

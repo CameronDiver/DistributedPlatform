@@ -11,11 +11,13 @@ Process::Process(void) {
 	info.main=NULL;
 	info.syscall=NULL;
 	info.syscallData=NULL;
+	info.environ=NULL;
 	dlHandle=NULL;
 	name=NULL;
 	path=NULL;
 	state=ProcessState::None;
 	posixPID=-1;
+	environ=NULL;
 }
 
 Process::~Process(void) {
@@ -47,9 +49,19 @@ Process::~Process(void) {
 		path=NULL;
 	}
 	
+	// Environment.
+	if (environ!=NULL) {
+		char **ptr;
+		for(ptr=environ;*ptr!=NULL;++ptr)
+			free(*ptr);
+		free(environ);
+		environ=NULL;
+	}
+
 	// Others.
 	info.syscall=NULL;
 	info.syscallData=NULL;
+	info.environ=NULL; // No need to free as original allocations free'd above.
 	state=ProcessState::None;
 	posixPID=-1;
 }
@@ -120,6 +132,51 @@ bool Process::loadFileFS(FS *fs, const char *path) {
 	free(localPath);
 
 	return ret;
+}
+
+const char **Process::getEnviron(void) {
+	return (const char **)environ;
+}
+
+bool Process::setEnviron(const char **env) {
+	// Clear old.
+	const char **ptr;
+	char **ptr2;
+	if (environ!=NULL) {
+		for(ptr2=environ;*ptr2!=NULL;++ptr2)
+			free(*ptr2);
+		free(environ);
+		environ=NULL;
+	}
+	info.environ=environ;
+
+	// Copy new.
+	for(ptr=env;*ptr!=NULL;++ptr) ;
+	environ=(char **)malloc(sizeof(char *)*(ptr+1-env));
+	if (environ==NULL)
+		goto error;
+	for(ptr=env,ptr2=environ;*ptr!=NULL;++ptr,++ptr2) {
+		size_t len=strlen(*ptr);
+		*ptr2=(char *)malloc(len+1);
+		if (*ptr2==NULL)
+			goto error;
+		strcpy(*ptr2, *ptr);
+	}
+	*ptr2=NULL;
+
+	info.environ=environ;
+
+	return true;
+
+	error:
+	if (environ!=NULL) {
+		for(ptr2=environ;*ptr2!=NULL;++ptr2)
+			free(*ptr2);
+		free(environ);
+		environ=NULL;
+	}
+	info.environ=environ;
+	return false;
 }
 
 bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, ...) {
@@ -207,15 +264,9 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	size_t nameSize, pathSize;
 
 	// Create 'blank' child.
-	Process *child=new Process;
+	Process *child=new Process();
 	if (child==NULL)
 		return NULL;
-	child->info.argc=0;
-	child->info.argv=NULL;
-	child->info.syscallData=NULL;
-	child->dlHandle=NULL;
-	child->name=NULL;
-	child->path=NULL;
 	
 	// argc and argv.
 	child->info.argv=(const char **)malloc(sizeof(char *)*info.argc);
@@ -260,7 +311,10 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	child->info.syscall=syscall;
 	child->info.syscallData=syscallData;
 	child->state=state;
-	
+
+	// Set environment.
+	child->setEnviron(this->getEnviron());
+
 	// Restart stdlib as we've changed the info struct.
 	(*child->restart)(&child->info);
 	

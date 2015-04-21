@@ -77,6 +77,9 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			Process *newProc=new Process;
 			if (newProc->loadFileFS(server->filesystem, path))
 			{
+				// Copy environment.
+				newProc->setEnviron(curr->getEnviron());
+
 				// 'Unload' old process.
 				curr->~Process();
 				

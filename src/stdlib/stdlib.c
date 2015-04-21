@@ -13,6 +13,7 @@ typedef struct {
 	ProcessMain main;
   void (*syscall)(void *, uint32_t, ...);
   void *syscallData;
+  char **environ;
 }StdlibProcessInfo;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -89,7 +90,7 @@ void _start(const void *ptr) {
 	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
 	
 	// Setup standard library.
-	Denviron=NULL;
+	Denviron=info->environ;
 	sys_init(info->syscall, info->syscallData);
 	
 	// Run main() and exit with return value.
@@ -101,6 +102,6 @@ void _restart(const void *ptr) {
 	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
 	
 	// Setup standard library.
-	Denviron=NULL;
+	Denviron=info->environ;
 	sys_init(info->syscall, info->syscallData);
 }
