@@ -1,6 +1,8 @@
+#include <assert.h>
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
+#include <libgen.h>
 
 #include "process.h"
 #include "util.h"
@@ -18,6 +20,7 @@ Process::Process(void) {
 	state=ProcessState::None;
 	posixPID=-1;
 	environ=NULL;
+	cwd=NULL;
 }
 
 Process::~Process(void) {
@@ -57,6 +60,10 @@ Process::~Process(void) {
 		free(environ);
 		environ=NULL;
 	}
+
+	// Current working directory.
+	free(cwd);
+	cwd=NULL;
 
 	// Others.
 	info.syscall=NULL;
@@ -128,14 +135,39 @@ bool Process::loadFileFS(FS *fs, const char *path) {
 	if (path==NULL || path[0]!='/')
 		return false;
 
-	// dlopen requires a local file so ask the file system for such a file.
-	char *localPath=fs->fileLocalPath(path);
-	if (localPath==NULL)
-		return false;
-	bool ret=this->loadFileLocal(localPath);
-	free(localPath);
+	char *localPath, *trueCwd;
 
-	return ret;
+	// dlopen requires a local file so ask the file system for such a file.
+	localPath=fs->fileLocalPath(path);
+	if (localPath==NULL)
+		goto error;
+
+	// Set current working directory.
+	assert(cwd==NULL);
+	cwd=(char *)malloc(strlen(path)+1);
+	if (cwd==NULL)
+		goto error;
+	strcpy(cwd, path);
+	trueCwd=dirname(cwd);
+	memmove(cwd, trueCwd, strlen(trueCwd)+1);
+
+	// Attempt to load file.
+	if (!this->loadFileLocal(localPath))
+		goto error;
+
+	// Tidy up.
+	free(localPath);
+	return true;
+
+	error:
+	free(localPath);
+	free(cwd);
+	cwd=NULL;
+	return false;
+}
+
+const char *Process::getCwd(void) {
+	return cwd;
 }
 
 const char **Process::getEnviron(void) {
@@ -265,7 +297,7 @@ bool Process::arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 }
 
 Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscallData) {
-	size_t nameSize, pathSize;
+	size_t nameSize, pathSize, cwdSize;
 
 	// Create 'blank' child.
 	Process *child=new Process();
@@ -298,7 +330,14 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	if (child->path==NULL)
 		goto error;
 	memcpy(child->path, path, pathSize);
-	
+
+	// Current working directory.
+	cwdSize=strlen(cwd)+1;
+	child->cwd=(char *)malloc(cwdSize);
+	if (child->cwd==NULL)
+		goto error;
+	memcpy(child->cwd, cwd, cwdSize);
+
 	// (re)load shared library.
 	child->dlHandle=dlopen(path, RTLD_LAZY);
 	if (child->dlHandle==NULL)
@@ -334,6 +373,7 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	dlclose(child->dlHandle);
 	free((void *)child->name);
 	free((void *)child->path);
+	free((void *)child->cwd);
 	delete child;
 	return NULL;
 }

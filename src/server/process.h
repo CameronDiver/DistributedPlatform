@@ -20,9 +20,10 @@ class Process {
  public:
  	Process(void);
  	~Process(void);
- 	
-	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
+
 	bool loadFileFS(FS *fs, const char *path);
+
+ 	const char *getCwd(void);
 
 	const char **getEnviron(void);
 	bool setEnviron(const char **env);
@@ -30,24 +31,24 @@ class Process {
  	bool run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc=0, ...);
  	bool vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap);
  	bool arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, const char **argv);
- 	
+
  	Process *forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscallData);
- 	
- 	ProcessState getState(void);
- 	pid_t getPosixPID(void);
- 	void setPosixPID(pid_t pid);
+
+	ProcessState getState(void);
+	pid_t getPosixPID(void);
+	void setPosixPID(pid_t pid);
  private:
- 	struct
- 	{
- 		//TODO: Do we need a version number of sorts (to ensure stdlib version of this struct matches)?
+	struct
+	{
+		//TODO: Do we need a version number of sorts (to ensure stdlib version of this struct matches)?
 		int32_t argc;
 		const char **argv; // TODO: Static assert that sizeof(char)==1?
 		ProcessMain main;
 		void (*syscall)(void *, uint32_t, ...);
 		void *syscallData;
 		char **environ;
- 	}info;
- 	void *dlHandle;
+	}info;
+	void *dlHandle;
 	ProcessStart start;
 	ProcessRestart restart;
 	char *name;
@@ -55,6 +56,9 @@ class Process {
 	ProcessState state;
 	pid_t posixPID;
 	char **environ;
+	char *cwd; // Current working directory.
+
+	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 };
 
 #endif 

@@ -92,6 +92,28 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			}
 		}
 		break;
+		case 5: // getcwd
+		{
+			uint32_t ret=(uint32_t)va_arg(ap, uint32_t);
+			char *buf=(char *)va_arg(ap, char *);
+			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
+
+			// Check we have a current working directory.
+			if (server->procs[pid].getCwd()==NULL)
+				ret=0;
+			else if (buf!=NULL) {
+				// Copy string.
+				const char *cwd=server->procs[pid].getCwd();
+				strncpy(buf, cwd, size);
+
+				// Terminate with null byte in case full length.
+				buf[size-1]='\0';
+
+				// Indicate true length.
+				ret=strlen(cwd)+1;
+			}
+		}
+		break;
 		default:
 			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
 		break;
