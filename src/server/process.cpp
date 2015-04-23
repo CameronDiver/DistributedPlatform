@@ -131,6 +131,10 @@ bool Process::loadFileLocal(const char *gpath) {
 }
 
 bool Process::loadFileFS(FS *fs, const char *path) {
+	// Check we are not already loaded or running.
+	if (state!=ProcessState::None)
+		return false;
+
 	// Check path is absolute.
 	if (path==NULL || path[0]!='/')
 		return false;
