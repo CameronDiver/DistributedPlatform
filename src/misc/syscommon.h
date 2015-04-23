@@ -21,6 +21,7 @@ typedef enum {
 	SysCommonSysCallExit=1,
 	SysCommonSysCallFork=2,
 	SysCommonSysCallExec=11,
+	SysCommonSysCallChDir=12,
 	SysCommonSysCallGetPid=20,
 	SysCommonSysCallGetCwd=183,
 

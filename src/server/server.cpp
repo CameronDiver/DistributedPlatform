@@ -107,6 +107,14 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 				ret=strlen(cwd)+1;
 			}
 		} break;
+		case SysCommonSysCallChDir: {
+			int32_t ret=(int32_t)va_arg(ap, int32_t);
+			char *path=(char *)va_arg(ap, char *);
+
+			// TODO: Check path is sensible?
+
+			ret=(server->procs[pid]->setCwd(path) ? 0 : -1);
+		} break;
 		default:
 			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
 		break;
