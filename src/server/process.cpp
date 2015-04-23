@@ -1,6 +1,6 @@
-#include <dlfcn.h>
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 
 #include "process.h"
 #include "util.h"
@@ -336,8 +336,7 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	return NULL;
 }
 
-ProcessState Process::getState(void)
-{
+ProcessState Process::getState(void) {
 	return state;
 }
 
