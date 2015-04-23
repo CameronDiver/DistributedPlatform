@@ -27,13 +27,13 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 	ProcessPID pid=ProcessPIDError;
 	unsigned int i;
 	for(i=0;i<server->procs.size();++i)
-		if (server->procs[i].getPosixPID()==posixPID) {
+		if (server->procs[i]->getPosixPID()==posixPID) {
 			pid=i;
 			break;
 		}
 	if (pid==ProcessPIDError)
 		return;
-	Process *curr=&server->procs[pid];
+	Process *curr=server->procs[pid];
 	
 	// Parse system call.
 	va_list ap;
@@ -84,7 +84,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 				curr->~Process();
 				
 				// Update process array.
-				server->procs[pid]=*newProc;
+				server->procs[pid]=newProc;
 				
 				// Run (without forking).
 				newProc->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
@@ -99,11 +99,11 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
 
 			// Check we have a current working directory.
-			if (server->procs[pid].getCwd()==NULL)
+			if (server->procs[pid]->getCwd()==NULL)
 				ret=0;
 			else if (buf!=NULL) {
 				// Copy string.
-				const char *cwd=server->procs[pid].getCwd();
+				const char *cwd=server->procs[pid]->getCwd();
 				strncpy(buf, cwd, size);
 
 				// Terminate with null byte in case full length.
@@ -123,7 +123,8 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 }
 
 Server::Server(int port) {
-	procs.push_back(Process()); // To create PID of 1 for init.
+	Process *dummy=new Process();
+	procs.push_back(dummy); // To create PID of 1 for init.
 	
 	tcpPort=port;
 	tcpSockFd=-1;
@@ -149,8 +150,8 @@ bool Server::run(FS *fs, const char *initPath) {
 		log(LogLevelInfo, "Loaded database.\n");
 	
 	// Load init process.
-	Process initProc;
-	if (!initProc.loadFileFS(fs, initPath)) {
+	Process *initProc=new Process();
+	if (!initProc->loadFileFS(fs, initPath)) {
 		log(LogLevelCrit, "Could not load init process at '%s'.\n", initPath);
 		return false;
 	}
@@ -158,7 +159,7 @@ bool Server::run(FS *fs, const char *initPath) {
 		log(LogLevelInfo, "Loaded init process.\n");
 	
 	// Add to list of processes.
-	ProcessPID initPID=this->processAdd(&initProc);
+	ProcessPID initPID=this->processAdd(initProc);
 	if (initPID==ProcessPIDError) {
 		log(LogLevelCrit, "Could not add init process to list.\n");
 		return false;
@@ -190,14 +191,14 @@ bool Server::run(FS *fs, const char *initPath) {
 
 ProcessPID Server::processFork(ProcessPID parentPID) {
 	// Create child process.
-	Process *parent=&procs[parentPID];
+	Process *parent=procs[parentPID];
 	Process *child=parent->forkCopy(&serverSysCall, (void *)this);
 	if (child==NULL)
 		return ProcessPIDError;
 	
 	// Add child to list of processes.
 	ProcessPID childPID=procs.size();
-	procs.push_back(*child);
+	procs.push_back(child);
 	
 	// Fork.
 	pid_t pid=fork();
@@ -209,7 +210,7 @@ ProcessPID Server::processFork(ProcessPID parentPID) {
 	}
   else if (pid==0)
   {
-  	procs[childPID].setPosixPID(getpid());
+  	procs[childPID]->setPosixPID(getpid());
   	return 0; // fork() returns 0 to child.
   }
   else
@@ -255,7 +256,7 @@ ProcessPID Server::processAdd(Process *proc) {
 	
 	// Add to queue.
 	ProcessPID pid=procs.size();
-	procs.push_back(*proc);
+	procs.push_back(proc);
 	
 	return pid;
 }
@@ -266,7 +267,7 @@ bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
 	// Run process.
 	va_list ap;
 	va_start(ap, argc);
-	bool ret=procs[pid].vrun(&serverSysCall, (void *)this, doFork, argc, ap);
+	bool ret=procs[pid]->vrun(&serverSysCall, (void *)this, doFork, argc, ap);
 	va_end(ap);
 	
 	return ret;

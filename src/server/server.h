@@ -21,7 +21,7 @@ class Server {
 	
 	ProcessPID processFork(ProcessPID parentPID);
 	
-	std::vector<Process> procs;
+	std::vector<Process *> procs;
  	FS *filesystem;
 
  private:
