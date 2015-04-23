@@ -31,8 +31,10 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			pid=i;
 			break;
 		}
-	if (pid==ProcessPIDError)
+	if (pid==ProcessPIDError) {
+		log(LogLevelErr, "System call from unknown process with POSIX pid=%u.\n", (unsigned)posixPID);
 		return;
+	}
 	Process *curr=server->procs[pid];
 	
 	// Parse system call.
