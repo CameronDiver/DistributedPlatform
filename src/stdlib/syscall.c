@@ -37,6 +37,12 @@ void sys_exec(const char *path, uint32_t argc, char **argv) {
 	(*sys_syscall)(sys_data, SysCommonSysCallExec, path, argc, argv);
 }
 
+int32_t sys_chdir(const char *path) {
+	int32_t ret;
+	(*sys_syscall)(sys_data, SysCommonSysCallChDir, &ret, path);
+	return ret;
+}
+
 uint32_t sys_getcwd(char *buf, uint32_t size) {
 	uint32_t ret;
 	(*sys_syscall)(sys_data, SysCommonSysCallGetCwd, &ret, buf, size);

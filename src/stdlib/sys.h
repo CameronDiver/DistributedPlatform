@@ -12,6 +12,7 @@ pid_t getpid(void);
 int execl(const char *path, const char *arg, ...);
 int execv(const char *path, char *const argv[]);
 
+int chdir(const char *path);
 char *getcwd(char *buf, size_t size);
 
 #endif

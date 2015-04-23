@@ -1,2 +1,2 @@
 #!/bin/bash
-gcc -nostdlib -lgcc -nostartfiles -ffreestanding -fpic -shared -I../../../stdlib/ -Wl,-wrap,fork -Wl,-wrap,getpid -Wl,-wrap,execl -Wl,-wrap,execv -Wl,-wrap,getcwd -Wl,-wrap,strcoll -Wl,-wrap,strxfrm -Wl,-wrap,malloc -Wl,-wrap,free -Wl,-wrap,realloc -Wl,-wrap,calloc -Wl,-wrap,abort -Wl,-wrap,atexit -Wl,-wrap,exit -Wl,-wrap,getenv -Wl,-wrap,system "$@"
+gcc -nostdlib -lgcc -nostartfiles -ffreestanding -fpic -shared -I../../../stdlib/ -Wl,-wrap,fork -Wl,-wrap,getpid -Wl,-wrap,execl -Wl,-wrap,execv -Wl,-wrap,chdir -Wl,-wrap,getcwd -Wl,-wrap,strcoll -Wl,-wrap,strxfrm -Wl,-wrap,malloc -Wl,-wrap,free -Wl,-wrap,realloc -Wl,-wrap,calloc -Wl,-wrap,abort -Wl,-wrap,atexit -Wl,-wrap,exit -Wl,-wrap,getenv -Wl,-wrap,system "$@"

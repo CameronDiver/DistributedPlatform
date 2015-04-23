@@ -104,6 +104,10 @@ int __wrap_execv(const char *path, char *const gargv[]) {
 	return -1; // sys_exec only returns if error.
 }
 
+int __wrap_chdir(const char *path) {
+	return sys_chdir(path);
+}
+
 char *__wrap_getcwd(char *buf, size_t size) {
 	// Check buffer.
 	if (buf==NULL) {
