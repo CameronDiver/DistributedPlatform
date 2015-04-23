@@ -73,63 +73,6 @@ Process::~Process(void) {
 	posixPID=-1;
 }
 
-bool Process::loadFileLocal(const char *gpath) {
-	const char *pathLast;
-	size_t nameSize, pathSize;
-
-	// Check we are not already loaded or running.
-	if (state!=ProcessState::None)
-		return false;
-
-	// Attempt to open the program as a dynamic library.
-	dlHandle=dlopen(gpath, RTLD_LAZY);
-	if (dlHandle==NULL)
-		goto error;
-
-	// Grab function pointers.
-	info.main=(ProcessMain)dlsym(dlHandle, "main");
-	start=(ProcessStart)dlsym(dlHandle, "_start");
-	restart=(ProcessStart)dlsym(dlHandle, "_restart");
-	if (info.main==NULL || start==NULL || restart==NULL)
-		goto error;
-
-	// Allocate memory for name.
-	pathLast=strstrrev(gpath, "/")+1;
-	nameSize=strlen(pathLast)+1;
-	name=(char *)malloc(sizeof(char)*nameSize);
-	if (name==NULL)
-		goto error;
-	memcpy((void *)name, (void *)pathLast, nameSize);
-	
-	// Allocate memory for path.
-	pathSize=strlen(gpath)+1;
-	path=(char *)malloc(sizeof(char)*pathSize);
-	if (path==NULL)
-		goto error;
-	memcpy((void *)path, (void *)gpath, pathSize);
-
-	// Update state.
-	state=ProcessState::Loaded;
-	
-	// Success.
-	return true;
-
-	error:
-	if (dlHandle!=NULL) {
-		dlclose(dlHandle);
-		dlHandle=NULL;
-	}
-	if (name!=NULL) {
-		free(name);
-		name=NULL;
-	}
-	if (path!=NULL) {
-		free(path);
-		path=NULL;
-	}
-	return false;
-}
-
 bool Process::loadFileFS(FS *fs, const char *path) {
 	// Check we are not already loaded or running.
 	if (state!=ProcessState::None)
@@ -392,4 +335,60 @@ pid_t Process::getPosixPID(void) {
 
 void Process::setPosixPID(pid_t pid) {
  	posixPID=pid;
+
+bool Process::loadFileLocal(const char *gpath) {
+	const char *pathLast;
+	size_t nameSize, pathSize;
+
+	// Check we are not already loaded or running.
+	if (state!=ProcessState::None)
+		return false;
+
+	// Attempt to open the program as a dynamic library.
+	dlHandle=dlopen(gpath, RTLD_LAZY);
+	if (dlHandle==NULL)
+		goto error;
+
+	// Grab function pointers.
+	info.main=(ProcessMain)dlsym(dlHandle, "main");
+	start=(ProcessStart)dlsym(dlHandle, "_start");
+	restart=(ProcessStart)dlsym(dlHandle, "_restart");
+	if (info.main==NULL || start==NULL || restart==NULL)
+		goto error;
+
+	// Allocate memory for name.
+	pathLast=strstrrev(gpath, "/")+1;
+	nameSize=strlen(pathLast)+1;
+	name=(char *)malloc(sizeof(char)*nameSize);
+	if (name==NULL)
+		goto error;
+	memcpy((void *)name, (void *)pathLast, nameSize);
+
+	// Allocate memory for path.
+	pathSize=strlen(gpath)+1;
+	path=(char *)malloc(sizeof(char)*pathSize);
+	if (path==NULL)
+		goto error;
+	memcpy((void *)path, (void *)gpath, pathSize);
+
+	// Update state.
+	state=ProcessState::Loaded;
+
+	// Success.
+	return true;
+
+	error:
+	if (dlHandle!=NULL) {
+		dlclose(dlHandle);
+		dlHandle=NULL;
+	}
+	if (name!=NULL) {
+		free(name);
+		name=NULL;
+	}
+	if (path!=NULL) {
+		free(path);
+		path=NULL;
+	}
+	return false;
 }
