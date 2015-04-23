@@ -328,10 +328,8 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 		free((void *)child->info.argv);
 	}
 	dlclose(child->dlHandle);
-	if (child->name!=NULL)
-		free((void *)child->name);
-	if (child->path!=NULL)
-		free((void *)child->path);
+	free((void *)child->name);
+	free((void *)child->path);
 	delete child;
 	return NULL;
 }
