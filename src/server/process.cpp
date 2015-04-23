@@ -357,6 +357,7 @@ pid_t Process::getPosixPID(void) {
 
 void Process::setPosixPID(pid_t pid) {
  	posixPID=pid;
+}
 
 bool Process::loadFileLocal(const char *gpath) {
 	const char *pathLast;
