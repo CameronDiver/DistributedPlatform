@@ -16,4 +16,13 @@ typedef struct
 	char **environ;
 } SysCommonProcInfo;
 
+typedef enum {
+	SysCommonSysCallExit,
+	SysCommonSysCallFork,
+	SysCommonSysCallGetPid,
+	SysCommonSysCallAlloc,
+	SysCommonSysCallExec,
+	SysCommonSysCallGetCwd,
+} SysCommonSysCall;
+
 #endif

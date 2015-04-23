@@ -13,6 +13,7 @@
 
 #include "log.h"
 #include "server.h"
+#include "../misc/syscommon.h"
 
 static int callbackInc(void *user, int argc, char **argv, char **azColName){
    (*((int *)user))++;
@@ -40,37 +41,27 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 	// Parse system call.
 	va_list ap;
 	va_start(ap, id);
-	switch(id)
-	{
-		case 0: // exit
-		{
+	switch(id) {
+		case SysCommonSysCallExit: {
 			uint32_t status=(uint32_t)va_arg(ap, uint32_t);
 			exit(status);
-		}
-		break;
-		case 1: // fork
-		{
+		} break;
+		case SysCommonSysCallFork: {
 			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
 			*ret=server->processFork(pid);
-		}
-		break;
-		case 2: // getpid
-	  {
-	  	int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-	  	*ret=pid;
-	  }
-		break;
-		case 3: // alloc
-		{
+		} break;
+		case SysCommonSysCallGetPid: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			*ret=pid;
+		} break;
+		case SysCommonSysCallAlloc:	{
 			// TODO: Take server wide maxRam into account.
 			void **ret=(void **)va_arg(ap, void **);
 			void *ptr=(void *)va_arg(ap, void *);
 			size_t size=(size_t)va_arg(ap, size_t);
 			*ret=realloc(ptr, size);
-		}
-		break;
-		case 4: // exec
-		{
+		} break;
+		case SysCommonSysCallExec: {
 			const char *path=(const char *)va_arg(ap, const char *);
 			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
 			char **argv=(char **)va_arg(ap, char **);
@@ -95,10 +86,8 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 				newProc->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
 				exit(EXIT_SUCCESS);
 			}
-		}
-		break;
-		case 5: // getcwd
-		{
+		} break;
+		case SysCommonSysCallGetCwd: {
 			uint32_t ret=(uint32_t)va_arg(ap, uint32_t);
 			char *buf=(char *)va_arg(ap, char *);
 			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
@@ -117,8 +106,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 				// Indicate true length.
 				ret=strlen(cwd)+1;
 			}
-		}
-		break;
+		} break;
 		default:
 			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
 		break;
