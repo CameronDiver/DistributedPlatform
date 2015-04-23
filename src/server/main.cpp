@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 	// Create server instance and run init program.
 	Server server(51717);
-	if (!server.run(&fs, "sys/init")) {
+	if (!server.run(&fs, "/sys/init")) {
 		log(LogLevelCrit, "Could not run server.\n");
 		exit(EXIT_FAILURE);
 	}

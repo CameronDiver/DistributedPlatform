@@ -124,6 +124,10 @@ bool Process::loadFileLocal(const char *gpath) {
 }
 
 bool Process::loadFileFS(FS *fs, const char *path) {
+	// Check path is absolute.
+	if (path==NULL || path[0]!='/')
+		return false;
+
 	// dlopen requires a local file so ask the file system for such a file.
 	char *localPath=fs->fileLocalPath(path);
 	if (localPath==NULL)
