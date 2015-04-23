@@ -313,7 +313,7 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 		goto error;
 	
 	// Grab function pointers.
-	child->info.main=(ProcessMain)dlsym(child->dlHandle, "main");
+	child->info.main=(SysCommonProcMain)dlsym(child->dlHandle, "main");
 	child->start=(ProcessStart)dlsym(child->dlHandle, "_start");
 	child->restart=(ProcessRestart)dlsym(child->dlHandle, "_restart");
 	if (child->info.main==NULL || child->start==NULL || child->restart==NULL)
@@ -373,7 +373,7 @@ bool Process::loadFileLocal(const char *gpath) {
 		goto error;
 
 	// Grab function pointers.
-	info.main=(ProcessMain)dlsym(dlHandle, "main");
+	info.main=(SysCommonProcMain)dlsym(dlHandle, "main");
 	start=(ProcessStart)dlsym(dlHandle, "_start");
 	restart=(ProcessStart)dlsym(dlHandle, "_restart");
 	if (info.main==NULL || start==NULL || restart==NULL)

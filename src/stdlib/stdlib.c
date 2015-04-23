@@ -3,18 +3,9 @@
 #include "string.h"
 #include "syscall.h"
 
+#include "../misc/syscommon.h"
+
 char **Denviron=NULL;
-
-typedef int (*ProcessMain)(int, const char **);
-
-typedef struct {
-	int32_t argc;
-	const char **argv;
-	ProcessMain main;
-  void (*syscall)(void *, uint32_t, ...);
-  void *syscallData;
-  char **environ;
-}StdlibProcessInfo;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Private prototypes.
@@ -87,7 +78,7 @@ int __wrap_system(const char* command) {
 
 void _start(const void *ptr) {
 	// Grab info struct.
-	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
+	const SysCommonProcInfo *info=(const SysCommonProcInfo *)ptr;
 	
 	// Setup standard library.
 	Denviron=info->environ;
@@ -99,7 +90,7 @@ void _start(const void *ptr) {
 
 void _restart(const void *ptr) {
 	// Grab info struct.
-	const StdlibProcessInfo *info=(const StdlibProcessInfo *)ptr;
+	const SysCommonProcInfo *info=(const SysCommonProcInfo *)ptr;
 	
 	// Setup standard library.
 	Denviron=info->environ;

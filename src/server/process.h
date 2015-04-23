@@ -6,13 +6,13 @@
 #include <unistd.h>
 
 #include "fs.h"
+#include "../misc/syscommon.h"
 
 typedef int32_t ProcessPID;
 const ProcessPID ProcessPIDError=-1;
 
 enum class ProcessState { None, Loaded, Running };
 
-typedef int (*ProcessMain)(int, const char **);
 typedef void (*ProcessStart)(const void *);
 typedef void (*ProcessRestart)(const void *);
 
@@ -39,16 +39,7 @@ class Process {
 	pid_t getPosixPID(void);
 	void setPosixPID(pid_t pid);
  private:
-	struct
-	{
-		//TODO: Do we need a version number of sorts (to ensure stdlib version of this struct matches)?
-		int32_t argc;
-		const char **argv; // TODO: Static assert that sizeof(char)==1?
-		ProcessMain main;
-		void (*syscall)(void *, uint32_t, ...);
-		void *syscallData;
-		char **environ;
-	}info;
+	SysCommonProcInfo info;
 	void *dlHandle;
 	ProcessStart start;
 	ProcessRestart restart;
