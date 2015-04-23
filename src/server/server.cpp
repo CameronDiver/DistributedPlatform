@@ -93,7 +93,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		}
 		break;
 		default:
-			// TODO: What to do in case of invalid syscall?
+			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
 		break;
 	}
 	
