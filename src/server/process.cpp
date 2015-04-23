@@ -133,6 +133,13 @@ bool Process::setEnviron(const char **env) {
 	}
 	info.environ=environ;
 
+	// Special case - env==NULL.
+	if (env==NULL) {
+		environ=NULL;
+		info.environ=NULL;
+		return true;
+	}
+
 	// Copy new.
 	for(ptr=env;*ptr!=NULL;++ptr) ;
 	environ=(char **)malloc(sizeof(char *)*(ptr+1-env));
