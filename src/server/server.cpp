@@ -74,7 +74,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 			const char *path=(const char *)va_arg(ap, const char *);
 			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
 			char **argv=(char **)va_arg(ap, char **);
-			
+
 			// Create and load new process.
 			Process *newProc=new Process;
 			if (newProc->loadFileFS(server->filesystem, path))
@@ -90,7 +90,7 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 				
 				// Update process array.
 				server->procs[pid]=newProc;
-				
+
 				// Run (without forking).
 				newProc->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
 				exit(EXIT_SUCCESS);
