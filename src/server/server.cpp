@@ -82,6 +82,9 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 				// Copy environment.
 				newProc->setEnviron(curr->getEnviron());
 
+				// Exec should preserve current working directory.
+				newProc->setCwd(curr->getCwd());
+
 				// 'Unload' old process.
 				curr->~Process();
 				
