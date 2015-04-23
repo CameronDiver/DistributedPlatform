@@ -17,12 +17,15 @@ typedef struct
 } SysCommonProcInfo;
 
 typedef enum {
-	SysCommonSysCallExit,
-	SysCommonSysCallFork,
-	SysCommonSysCallGetPid,
+	// Following system calls roughly match those found in Linux.
+	SysCommonSysCallExit=1,
+	SysCommonSysCallFork=2,
+	SysCommonSysCallExec=11,
+	SysCommonSysCallGetPid=20,
+	SysCommonSysCallGetCwd=183,
+
+	// Unique calls.
 	SysCommonSysCallAlloc,
-	SysCommonSysCallExec,
-	SysCommonSysCallGetCwd,
 } SysCommonSysCall;
 
 #endif
