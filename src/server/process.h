@@ -24,6 +24,7 @@ class Process {
 	bool loadFileFS(FS *fs, const char *path);
 
  	const char *getCwd(void);
+	bool setCwd(const char *gcwd);
 
 	const char **getEnviron(void);
 	bool setEnviron(const char **env);

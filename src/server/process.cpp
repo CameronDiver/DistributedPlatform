@@ -117,6 +117,21 @@ const char *Process::getCwd(void) {
 	return cwd;
 }
 
+bool Process::setCwd(const char *gcwd) {
+	// Allocate memory.
+	size_t gSize=strlen(gcwd)+1;
+	char *ptr=(char *)malloc(gSize);
+	if (ptr==NULL)
+		return false;
+
+	// Overwrite old.
+	free(cwd);
+	cwd=ptr;
+	memcpy(cwd, gcwd, gSize);
+
+	return true;
+}
+
 const char **Process::getEnviron(void) {
 	return (const char **)environ;
 }
