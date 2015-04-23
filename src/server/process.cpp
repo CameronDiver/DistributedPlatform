@@ -76,7 +76,7 @@ Process::~Process(void) {
 bool Process::loadFileLocal(const char *gpath) {
 	const char *pathLast;
 	size_t nameSize, pathSize;
-	
+
 	// Check we are not already loaded or running.
 	if (state!=ProcessState::None)
 		return false;
