@@ -34,3 +34,9 @@ void *sys_alloc(void *ptr, size_t size) {
 void sys_exec(const char *path, uint32_t argc, char **argv) {
 	(*sys_syscall)(sys_data, 4, path, argc, argv);
 }
+
+uint32_t sys_getcwd(char *buf, uint32_t size) {
+	uint32_t ret;
+	(*sys_syscall)(sys_data, 5, &ret, buf, size);
+	return ret;
+}

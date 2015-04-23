@@ -16,4 +16,6 @@ void *sys_alloc(void *ptr, size_t size);
 
 void sys_exec(const char *path, uint32_t argc, char **argv);
 
+uint32_t sys_getcwd(char *buf, uint32_t size);
+
 #endif

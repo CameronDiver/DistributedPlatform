@@ -103,3 +103,29 @@ int __wrap_execv(const char *path, char *const gargv[]) {
 	
 	return -1; // sys_exec only returns if error.
 }
+
+char *__wrap_getcwd(char *buf, size_t size) {
+	// Check buffer.
+	if (buf==NULL) {
+		// TODO: Set errno=EFAULT;
+		return NULL;
+	}
+
+	// Check size;
+	if (size==0) {
+		// TODO: Set errno=EINVAL;
+		return NULL;
+	}
+
+	// Use system call.
+	size_t trueSize=sys_getcwd(buf, size);
+
+	// Check for range error.
+	if (trueSize>size) {
+		// TODO: Set errno=ERANGE;
+		return NULL;
+	}
+
+	// Success.
+	return buf;
+}
