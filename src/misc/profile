@@ -1,4 +1,7 @@
 # ~/.profile is passed to /bin/shell when a new tty is created.
 
+# Set home directory.
+export HOME=/home
+
 # Move us from the root to our home directory.
 cd ~
