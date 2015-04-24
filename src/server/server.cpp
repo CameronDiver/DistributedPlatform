@@ -372,12 +372,70 @@ bool Server::tcpRead(Connection *con) {
 	SocketTcp *sockTcp=dynamic_cast<SocketTcp *>(con->sock);
 	int fd=sockTcp->sockFd;
 
+	// Attempt to read.
 	char buffer[1024];
 	int nbytes=read(fd, buffer, 1024);
 	if (nbytes<=0)
 		return false; // EOF or error.
 
-	log(LogLevelInfo, "Received message: '%s'.\n", buffer);
+	// Remove line endings.
+	do {
+		buffer[--nbytes]='\0';
+	} while(nbytes>0 && (buffer[nbytes-1]==0 || buffer[nbytes-1]==10 || buffer[nbytes-1]==13));
+
+	// Parse message.
+	char *save=NULL;
+	char *part=strtok_r(buffer, " ", &save);
+	if (part==NULL)
+		return true;
+	if (!strcmp(part, "type")) {
+		// Check if connection already has a type.
+		if (con->type!=Connection::TypeNone) {
+			// TODO: Should we notify the other party?
+			log(LogLevelDebug, "Type command received but connection already has a type.\n"); // TODO: Add 'where from' details.
+			return true;
+		}
+
+		// Extract desired type.
+		part=strtok_r(NULL, " ", &save);
+		if (part==NULL) {
+			// TODO: Should we notify the other party?
+
+			log(LogLevelDebug, "No type given in type command.\n"); // TODO: Add 'where from' details.
+			return true;
+		}
+
+		if (!strcmp(part, "tty")) {
+			// TODO: Should we notify the other party of the result?
+
+			// Start new shell.
+			Process *shell=new Process();
+			if (!shell->loadFileFS(filesystem, "/bin/shell"))
+				return true;
+
+			// Add to list of programs.
+			ProcessPID shellPID=this->processAdd(shell);
+			if (shellPID==ProcessPIDError)
+				return true;
+
+			// Setup stdin and stdout.
+			// TODO: Connect connection's socket with processes stdin/stdout.
+
+			// Run shell, initially running user's .profile script, then taking input from stdin.
+			if (!this->processRun(shellPID, true, 1, "home/.profile"))
+				return true;
+
+			// Update connection type.
+			con->type=Connection::TypeTTY;
+			log(LogLevelDebug, "Connection now has type 'tty'.\n"); // TODO: Add 'where from' details.
+		}
+		else {
+			// TODO: Should we notify the other party?
+
+			log(LogLevelDebug, "Invalid type  '%s'.\n", part); // TODO: Add 'where from' details.
+		}
+	} else
+		log(LogLevelDebug, "Received bad command '%s'.\n", part); // TODO: Add 'where from' details.
 
 	return true;
 }

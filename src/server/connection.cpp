@@ -2,6 +2,7 @@
 
 Connection::Connection(Socket *socket) {
 	sock=socket;
+	type=TypeNone;
 }
 
 Connection::~Connection() {

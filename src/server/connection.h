@@ -5,7 +5,13 @@
 
 class Connection {
  public:
+	enum Type {
+		TypeNone,
+		TypeTTY, // A teletype/terminal.
+	};
+
  	Socket *sock;
+	Type type;
 
 	Connection(Socket *socket);
 	~Connection();
