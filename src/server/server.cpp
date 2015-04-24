@@ -131,13 +131,10 @@ Server::Server(int port) {
 	tcpSockFd=-1;
 	filesystem=NULL;
 	database=NULL;
+	stopFlag=false;
 }
 
 Server::~Server(void) {
-	Server::tcpClose();
-
-	sqlite3_close(database);
-	database=NULL;
 }
 
 bool Server::run(FS *fs, const char *initPath) {
@@ -178,16 +175,47 @@ bool Server::run(FS *fs, const char *initPath) {
 
 	// Setup TCP socket for listening.
 	if (tcpPort>=0) {
-		if (!this->tcpListen(tcpPort))
-			log(LogLevelWarning, "Could not setup TCP socket for listening on port %u\n", tcpPort);
+		if (!this->tcpListen(tcpPort)) {
+			log(LogLevelCrit, "Could not setup TCP socket for listening on port %u\n", tcpPort);
+			return false;
+		}
 		else
 			log(LogLevelInfo, "Setup TCP socket for listening on port %u.\n", tcpPort);
 	}
+	FD_ZERO(&fdSetActive);
+	FD_SET(tcpSockFd, &fdSetActive);
 
-	// Check for any new TCP activity (infinite loop).
-	this->tcpPoll();
+	// Main loop.
+	while(!this->stopFlag) {
+		// Check for any new TCP activity.
+		this->tcpPoll();
+
+		// Sleep.
+		usleep(10000);
+	}
+
+	// Tidy up.
+	log(LogLevelInfo, "Stopping.\n");
+
+	// Stopping processes.
+	// TODO: this (and also tidy up 'procs').
+
+	// Close connections.
+	// TODO: this (and also tidy up 'connections').
+
+	// Close TCP listening socket.
+	this->tcpClose();
+
+	// Close database.
+	sqlite3_close(database);
+	database=NULL;
 
 	return true;
+}
+
+void Server::stop(void) {
+	log(LogLevelInfo, "Stop request received.\n");
+	this->stopFlag=true;
 }
 
 ProcessPID Server::processFork(ProcessPID parentPID) {
@@ -303,68 +331,64 @@ void Server::tcpPoll(void) {
 	if (tcpSockFd<0)
 		return;
 
-	fd_set fdSetActive, fdSetRead;
-	FD_ZERO(&fdSetActive);
-	FD_SET(tcpSockFd, &fdSetActive);
+	fd_set fdSetRead=fdSetActive;
+	struct timeval timeout;
+	timeout.tv_sec=0;
+	timeout.tv_usec=0;
+	if (select(FD_SETSIZE, &fdSetRead, NULL, NULL, &timeout)<0)
+		return;
 
-	while(1) {
-		// Block until input arrives on one or more active sockets.
-		fdSetRead=fdSetActive;
-		if (select(FD_SETSIZE, &fdSetRead, NULL, NULL, NULL)<0)
-			break;
+	// Check for new connect requests.
+	if (FD_ISSET(tcpSockFd, &fdSetRead)) {
+		struct sockaddr_in addr;
+		socklen_t addrLen=sizeof(addr);
+		int newFd=accept(tcpSockFd, (struct sockaddr *)&addr, &addrLen);
 
-		// Check for new connect requests.
-		if (FD_ISSET(tcpSockFd, &fdSetRead)) {
-			struct sockaddr_in addr;
-			socklen_t addrLen=sizeof(addr);
-			int newFd=accept(tcpSockFd, (struct sockaddr *)&addr, &addrLen);
-
-			if (newFd>=0) {
-				// Success, add to list of connections.
-				SocketTcp *socket=new SocketTcp();
-				socket->listen(&addr, addrLen, newFd);
-				connections.push_back(Connection(socket));
-				FD_SET(newFd, &fdSetActive);
-				log(LogLevelInfo, "New connection from host %s, port %u.\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-			}
+		if (newFd>=0) {
+			// Success, add to list of connections.
+			SocketTcp *socket=new SocketTcp();
+			socket->listen(&addr, addrLen, newFd);
+			connections.push_back(Connection(socket));
+			FD_SET(newFd, &fdSetActive);
+			log(LogLevelInfo, "New connection from host %s, port %u.\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 		}
+	}
 
-		// Check for data from TCP clients.
-		std::list<Connection>::iterator iter;
-		for(iter=connections.begin();iter!=connections.end();) {
-			SocketTcp *sockTcp;
-			int clientFd;
+	// Check for data from TCP clients.
+	std::list<Connection>::iterator iter;
+	for(iter=connections.begin();iter!=connections.end();) {
+		SocketTcp *sockTcp;
+		int clientFd;
 
-			// We are only looking for TCP sockets.
-			if (iter->sock->type!=Socket::TypeTcp)
-				goto next;
+		// We are only looking for TCP sockets.
+		if (iter->sock->type!=Socket::TypeTcp)
+			goto next;
 
-			// Check for activity;
-			sockTcp=dynamic_cast<SocketTcp *>(iter->sock);
-			clientFd=sockTcp->sockFd;
-			if (!FD_ISSET(clientFd, &fdSetRead))
-				goto next;
+		// Check for activity;
+		sockTcp=dynamic_cast<SocketTcp *>(iter->sock);
+		clientFd=sockTcp->sockFd;
+		if (!FD_ISSET(clientFd, &fdSetRead))
+			goto next;
 
-			// Read the data we have received.
-			if (this->tcpRead(&*iter))
-				goto next;
+		// Read the data we have received.
+		if (this->tcpRead(&*iter))
+			goto next;
 
-			// Error.
-			log(LogLevelInfo, "TCP client disconnected.\n");
+		// Error.
+		log(LogLevelInfo, "TCP client disconnected.\n");
 
-			// Close connection.
-			close(clientFd);
+		// Close connection.
+		close(clientFd);
 
-			// Remove from connections list.
-			iter=connections.erase(iter);
+		// Remove from connections list.
+		iter=connections.erase(iter);
 
-			// Clear active flag.
-			FD_CLR(clientFd, &fdSetActive);
+		// Clear active flag.
+		FD_CLR(clientFd, &fdSetActive);
 
-			// Advance to next connection.
-			next:
-			++iter;
-		}
+		// Advance to next connection.
+		next:
+		++iter;
 	}
 }
 
@@ -428,13 +452,14 @@ bool Server::tcpRead(Connection *con) {
 			// Update connection type.
 			con->type=Connection::TypeTTY;
 			log(LogLevelDebug, "Connection now has type 'tty'.\n"); // TODO: Add 'where from' details.
-		}
-		else {
+		} else {
 			// TODO: Should we notify the other party?
 
 			log(LogLevelDebug, "Invalid type  '%s'.\n", part); // TODO: Add 'where from' details.
 		}
-	} else
+	} else if (!strcmp(part, "stop"))
+		this->stop(); // TODO: Check that this connection has permission to stop the server.
+	else
 		log(LogLevelDebug, "Received bad command '%s'.\n", part); // TODO: Add 'where from' details.
 
 	return true;

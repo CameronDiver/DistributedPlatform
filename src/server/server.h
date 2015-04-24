@@ -18,7 +18,8 @@ class Server {
 	~Server(void);
 
 	bool run(FS *fs, const char *initPath);
-	
+	void stop(void);
+
 	ProcessPID processFork(ProcessPID parentPID);
 	
 	std::vector<Process *> procs;
@@ -29,7 +30,9 @@ class Server {
 
 	std::list <Connection> connections;
 	int tcpSockFd, tcpPort;
+	fd_set fdSetActive;
 	sqlite3 *database;
+	bool stopFlag;
 
 	bool databaseLoad(void);
 	ProcessPID processAdd(Process *proc);

@@ -72,9 +72,9 @@ cd ./src/programs
 	cd ../../
 cd ../../
 
-# Build server and create boot executable.
+# Build server.
 cd ./src/server
 make clean
 make
-cp ./main ../../boot
+cp ./main ../../server
 cd ../../
