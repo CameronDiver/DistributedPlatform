@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 class Socket {
- public:
+public:
 	enum Direction {
 		DirectionNone=0,
 		DirectionIn=1,
@@ -18,13 +18,14 @@ class Socket {
 		TypeTcp,
 	};
 
- 	Direction dir;
- 	Type type;
+	Direction dir;
+	Type type;
 
- 	Socket();
- 	~Socket();
- 	virtual ssize_t write(const void *data, size_t size);
- 	virtual ssize_t read(void *data, size_t max);
+	Socket();
+	~Socket();
+
+	virtual ssize_t write(const void *data, size_t size);
+	virtual ssize_t read(void *data, size_t max);
 	virtual bool open(void);
 	virtual bool close(void);
 };
