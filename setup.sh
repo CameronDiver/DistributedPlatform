@@ -6,6 +6,14 @@ cd ./container
 	mkdir -p ./bin
 	mkdir -p ./home
 	mkdir -p ./sys
+	mkdir -p ./dev
+cd ../
+
+# Create device files.
+cd ./dev
+	touch ./null
+	touch ./zero
+	touch ./full
 cd ../
 
 # Copy default profile script.
