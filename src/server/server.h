@@ -13,7 +13,10 @@
 #include "process.h"
 
 class Server {
- public:
+public:
+	std::vector<Process *> procs;
+	FS *filesystem;
+
 	Server(int port=-1);
 	~Server(void);
 
@@ -21,13 +24,10 @@ class Server {
 	void stop(void);
 
 	ProcessPID processFork(ProcessPID parentPID);
-	
-	std::vector<Process *> procs;
- 	FS *filesystem;
 
 	void syscall(ProcessPID pid, int id, va_list ap);
 
- private:
+private:
  	const char *pathDatabase="sys/database.db";
 
 	std::list <Connection> connections;

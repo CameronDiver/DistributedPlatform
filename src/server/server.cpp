@@ -118,7 +118,7 @@ bool Server::run(FS *fs, const char *initPath) {
 	// Tidy up.
 	log(LogLevelInfo, "Stopping.\n");
 
-	// Stopping processes.
+	// Stop processes.
 	// TODO: this (and also tidy up 'procs').
 
 	// Close connections.
