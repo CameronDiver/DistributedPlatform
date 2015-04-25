@@ -19,13 +19,12 @@ public:
 
 	SocketTcp();
 	~SocketTcp();
- 	ssize_t write(const void *data, size_t size);
- 	ssize_t read(void *data, size_t max);
+	ssize_t write(const void *data, size_t size);
+	ssize_t read(void *data, size_t max);
 
 	bool open(void); // Simply returns true, but not ready until connect() or listen() called.
- 	bool connect(const char *addr, unsigned int port);
- 	bool listen(const struct sockaddr_in *aaddr, socklen_t aaddrLen, int asockFd); // Assumes already accept()'ed connection.
-private:
+	bool connect(const char *addr, unsigned int port);
+	bool listen(const struct sockaddr_in *aaddr, socklen_t aaddrLen, int asockFd); // Assumes already accept()'ed connection.
 	bool close(void);
 };
 
