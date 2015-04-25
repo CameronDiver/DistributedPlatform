@@ -1,6 +1,9 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include <cstddef>
+#include <sys/types.h>
+
 class Device {
 public:
 	Device();

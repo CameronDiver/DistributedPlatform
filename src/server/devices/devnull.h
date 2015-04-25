@@ -1,6 +1,8 @@
 #ifndef DEVNULL_H
 #define DEVNULL_H
 
+#include "device.h"
+
 class DeviceNull : public Device {
 public:
 	DeviceNull();

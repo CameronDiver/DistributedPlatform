@@ -3,6 +3,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include "devices/devfull.h"
+#include "devices/devnull.h"
+#include "devices/devzero.h"
 #include <fcntl.h>
 #include <netdb.h>
 #include "net/sockettcp.h"
@@ -624,7 +627,37 @@ int Server::fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t 
 }
 
 int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_t mode) {
-	// TODO: this
+	Device *device=NULL;
+	int fd=-1;
+	FdEntry *entry=NULL;
+
+	// Look for device by name.
+	if (!strcmp(name, "full"))
+		device=new DeviceFull();
+	else if (!strcmp(name, "null"))
+		device=new DeviceNull();
+	else if (!strcmp(name, "zero"))
+		device=new DeviceZero();
+	if (device==NULL)
+		return -1;
+
+	// Create and add FdEntry to list.
+	fd=this->fdCreate();
+	if (fd==-1)
+		goto error;
+	entry=this->fdGet(fd);
+	entry->type=FdTypeDevice;
+	entry->refCount=1;
+	entry->d.device=device;
+
+	// Add internal fd to proc's list.
+	proc->fds.push_back(fd);
+
+	return entry->fd;
+
+	error:
+	if (device)
+		delete device;
 	return -1;
 }
 

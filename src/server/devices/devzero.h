@@ -1,6 +1,8 @@
 #ifndef DEVZERO_H
 #define DEVZERO_H
 
+#include "device.h"
+
 class DeviceZero : public Device {
 public:
 	DeviceZero();

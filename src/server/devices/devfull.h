@@ -1,6 +1,8 @@
 #ifndef DEVFULL_H
 #define DEVFULL_H
 
+#include "device.h"
+
 class DeviceFull : public Device {
 public:
 	DeviceFull();
