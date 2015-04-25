@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include <sys.h>
 
-#define O_RDONLY 0
-#define O_WRONLY 1
-#define O_RDWR 2
-
 #define BUFSIZE 128
 
 int main(int argc, char **argv) {

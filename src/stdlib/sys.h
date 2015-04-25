@@ -6,6 +6,10 @@
 
 //typedef uint32_t pid_t; // TODO: How to stop <stdlib.h> including <sys/types.h>?
 
+#define O_RDONLY 0
+#define O_WRONLY 1
+#define O_RDWR 2
+
 pid_t fork(void);
 pid_t getpid(void);
 
@@ -17,7 +21,7 @@ char *getcwd(char *buf, size_t size);
 
 ssize_t read(int fd, void *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
-int open(const char *pathname, int flags, mode_t mode); ... mode?
+int open(const char *pathname, int flags, mode_t mode);
 int close(int fd);
 
 #endif
