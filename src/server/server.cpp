@@ -218,13 +218,13 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 			}
 		} break;
 		case SysCommonSysCallGetCwd: {
-			uint32_t ret=(uint32_t *)va_arg(ap, uint32_t *);
+			uint32_t *ret=(uint32_t *)va_arg(ap, uint32_t *);
 			char *buf=(char *)va_arg(ap, char *);
 			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
 
 			// Check we have a current working directory.
 			if (this->procs[pid]->getCwd()==NULL)
-				ret=0;
+				*ret=0;
 			else if (buf!=NULL) {
 				// Copy string.
 				const char *cwd=this->procs[pid]->getCwd();
@@ -234,11 +234,11 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 				buf[size-1]='\0';
 
 				// Indicate true length.
-				ret=strlen(cwd)+1;
+				*ret=strlen(cwd)+1;
 			}
 		} break;
 		case SysCommonSysCallChDir: {
-			int32_t ret=(int32_t *)va_arg(ap, int32_t *);
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
 			char *path=(char *)va_arg(ap, char *);
 
 			// TODO: Check path is sensible?
