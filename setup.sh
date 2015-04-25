@@ -78,6 +78,13 @@ cd ./src/programs
 	cd ../bin
 	cp ./printenv ../../../../container/bin
 	cd ../../
+
+	cd ./cat/src
+	make clean
+	make
+	cd ../bin
+	cp ./cat ../../../../container/bin
+	cd ../../
 cd ../../
 
 # Build server.
