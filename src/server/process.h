@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdint>
+#include <list>
 #include <unistd.h>
 
 #include "fs.h"
@@ -18,6 +19,8 @@ typedef void (*ProcessRestart)(const void *);
 
 class Process {
  public:
+	std::list<int> fds; // File descriptors.
+
  	Process(void);
  	~Process(void);
 

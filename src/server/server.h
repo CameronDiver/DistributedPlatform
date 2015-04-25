@@ -6,14 +6,35 @@
 #include <list>
 #include <netinet/in.h>
 #include <sqlite3.h>
+#include <sys/stat.h>
 #include <vector>
 
 #include "connection.h"
+#include "devices/device.h"
 #include "fs.h"
 #include "process.h"
 
 class Server {
 public:
+	typedef enum {
+		FdTypeNone,
+		FdTypeFd,
+		FdTypeSocket,
+		FdTypeDevice,
+	} FdType;
+
+	typedef struct {
+		int fd;
+		FdType type;
+		unsigned int refCount;
+		union {
+			int fd;
+			Socket *socket;
+			Device *device;
+		} d;
+	} FdEntry;
+
+	std::vector<FdEntry *> fdEntries;
 	std::vector<Process *> procs;
 	FS *filesystem;
 
@@ -43,6 +64,15 @@ private:
 	void tcpClose(void);
 	void tcpPoll(void);
 	bool tcpRead(Connection *con);
+	ssize_t fdWrite(int fd, const void *buf, size_t count);
+	ssize_t fdRead(int fd, void *buf, size_t count);
+	int fdOpenFdFromPath(Process *proc, const char *path, int flags, mode_t mode); // Wrapper around FromFile() and FromDevice() variants.
+	int fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t mode);
+	int fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_t mode);
+	int fdOpenSocket(Process *proc, Socket *socket);
+	int fdClose(Process *proc, int fd);
+	Server::FdEntry *fdGet(int fd);
+	int fdCreate(void); // Returns new fd 'slot' to use.
 };
 
 #endif 

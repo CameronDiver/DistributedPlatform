@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <netdb.h>
 #include "net/sockettcp.h"
 #include <sys/socket.h>
@@ -123,6 +124,9 @@ bool Server::run(FS *fs, const char *initPath) {
 
 	// Close connections.
 	// TODO: this (and also tidy up 'connections').
+
+	// Free file entries.
+	// TODO: this
 
 	// Close TCP listening socket.
 	this->tcpClose();
@@ -245,6 +249,45 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 
 			*ret=(this->procs[pid]->setCwd(path) ? 0 : -1);
 		} break;
+		case SysCommonSysCallRead: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			void *buf=(void *)va_arg(ap, void *);
+			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
+
+			// TODO: Check permissions etc.
+			*ret=this->fdRead(fd, buf, count);
+		}
+		break;
+		case SysCommonSysCallWrite: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			const void *buf=(const void *)va_arg(ap, const void *);
+			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
+
+			// TODO: Check permissions etc.
+			*ret=this->fdWrite(fd, buf, count);
+		}
+		break;
+		case SysCommonSysCallOpen: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			const char *pathname=(const char *)va_arg(ap, const void *);
+			uint32_t flags=(uint32_t)va_arg(ap, uint32_t);
+			uint32_t mode=(uint32_t)va_arg(ap, uint32_t);
+
+			// TODO: Check permissions etc.
+			// TODO: Path needs simplifying and made absolute (so if ./ make relative to process cwd)
+			*ret=this->fdOpenFdFromPath(curr, pathname, mode, flags);
+		}
+		break;
+		case SysCommonSysCallClose: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			int32_t fd=(int32_t)va_arg(ap, int32_t);
+
+			// TODO: Check permissions etc.
+			*ret=this->fdClose(curr, fd);
+		}
+		break;
 		default:
 			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
 		break;
@@ -468,4 +511,185 @@ bool Server::tcpRead(Connection *con) {
 		log(LogLevelDebug, "Received bad command '%s'.\n", part); // TODO: Add 'where from' details.
 
 	return true;
+}
+
+ssize_t Server::fdWrite(int fd, const void *buf, size_t count) {
+	FdEntry *fdEntry=this->fdGet(fd);
+	if (fdEntry==NULL)
+		return -1;
+
+	switch(fdEntry->type) {
+		case FdTypeNone:
+			return -1;
+		break;
+		case FdTypeFd:
+			return write(fdEntry->d.fd, buf, count);
+		break;
+		case FdTypeSocket:
+			return fdEntry->d.socket->write(buf, count);
+		break;
+		case FdTypeDevice:
+			return fdEntry->d.device->write(buf, count);
+		break;
+	}
+
+	return -1;
+}
+
+ssize_t Server::fdRead(int fd, void *buf, size_t count) {
+	FdEntry *fdEntry=this->fdGet(fd);
+	if (fdEntry==NULL)
+		return -1;
+
+	switch(fdEntry->type) {
+		case FdTypeNone:
+			return -1;
+		break;
+		case FdTypeFd:
+			return read(fdEntry->d.fd, buf, count);
+		break;
+		case FdTypeSocket:
+			return fdEntry->d.socket->read(buf, count);
+		break;
+		case FdTypeDevice:
+			return fdEntry->d.device->read(buf, count);
+		break;
+	}
+
+	return -1;
+}
+
+int Server::fdOpenSocket(Process *proc, Socket *socket) {
+	// Assumes socket is valid and open.
+
+	// Create FdEntry and add to list.
+	int fd=this->fdCreate();
+	if (fd==-1)
+		return -1;
+	FdEntry *entry=this->fdGet(fd);
+	entry->type=FdTypeSocket;
+	entry->refCount=1;
+	entry->d.socket=socket;
+
+	return entry->fd;
+}
+
+int Server::fdOpenFdFromPath(Process *proc, const char *path, int flags, mode_t mode) {
+	// Assumes path has already been 'simplified' and process has valid permissions.
+
+	// Switch on the 'file' type.
+	if (!strncmp(path, "/dev/", 5))
+		return fdOpenFdFromDevice(proc, path+5, flags, mode);
+	else
+		return fdOpenFdFromFile(proc, path, flags, mode);
+
+	return -1;
+}
+
+int Server::fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t mode) {
+	char *localPath=NULL;
+	int pathFd=-1, fd=-1;
+	FdEntry *entry=NULL;
+
+	// Find local path.
+	localPath=filesystem->fileLocalPath(path);
+	if (localPath==NULL)
+		goto error;
+
+	// Call open(2).
+	pathFd=open(localPath, flags, mode);
+	if (pathFd==-1)
+		goto error;
+
+	// Create and add FdEntry to list.
+	fd=this->fdCreate();
+	if (fd==-1)
+		goto error;
+	entry=this->fdGet(fd);
+	entry->type=FdTypeFd;
+	entry->refCount=1;
+	entry->d.fd=pathFd;
+
+	// Add internal fd to proc's list.
+	proc->fds.push_back(fd);
+
+	free(localPath);
+	return entry->fd;
+
+	error:
+	free(localPath);
+	if (pathFd>=0)
+		close(pathFd);
+	return -1;
+}
+
+int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_t mode) {
+	// TODO: this
+	return -1;
+}
+
+int Server::fdClose(Process *proc, int fd) {
+	// Find corressponding FdEntry.
+	FdEntry *entry=this->fdGet(fd);
+	if (entry==NULL)
+		return -1;
+
+	// Will this call result in the FD being closed?
+	assert(entry->refCount>0);
+	if (entry->refCount<=1) {
+		// Actually close the FD.
+		switch(entry->type) {
+			case FdTypeFd:
+				if (close(entry->d.fd)==-1)
+					return -1;
+			break;
+			case FdTypeSocket:
+				// TODO: this.
+				return -1;
+			break;
+			case FdTypeDevice:
+				// TODO: this.
+				return -1;
+			break;
+			default:
+				return -1;
+			break;
+		}
+
+		// Remove from our list of FDs.
+		free(entry);
+		fdEntries[fd]=NULL;
+	}
+	else
+		--entry->refCount;
+
+	// Remove from proc's list of FDs.
+	// TODO: this
+
+	return 0;
+}
+
+Server::FdEntry *Server::fdGet(int fd) {
+	return (fd>=0 && fd<fdEntries.size()) ? fdEntries[fd] : NULL;
+}
+
+int Server::fdCreate(void) {
+	// Look for unused entries.
+	size_t i;
+	for(i=0;i<fdEntries.size();++i) {
+		if (fdEntries[i]==NULL) {
+			fdEntries[i]=(FdEntry *)malloc(sizeof(FdEntry));
+			return (fdEntries[i]!=NULL ? i : -1);
+		} else if (fdEntries[i]->type==FdTypeNone)
+			return i;
+	}
+
+	// Otherwise add new entry.
+	FdEntry *entry=(FdEntry *)malloc(sizeof(FdEntry));
+	if (entry==NULL)
+		return -1;
+	entry->fd=i;
+	entry->type=FdTypeNone;
+	fdEntries.push_back(entry);
+	return i;
 }
