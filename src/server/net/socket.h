@@ -25,6 +25,8 @@ class Socket {
  	~Socket();
  	virtual ssize_t write(const void *data, size_t size);
  	virtual ssize_t read(void *data, size_t max);
+	virtual bool open(void);
+	virtual bool close(void);
 };
 
 #endif

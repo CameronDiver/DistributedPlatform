@@ -15,3 +15,11 @@ ssize_t Socket::write(const void *data, size_t size) {
 ssize_t Socket::read(void *data, size_t max) {
 	return -1;
 }
+
+bool Socket::open(void) {
+	return false;
+}
+
+bool Socket::close(void) {
+	return false;
+}

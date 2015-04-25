@@ -18,6 +18,10 @@ ssize_t wrapperWrite(int fd, const void *buf, size_t count) {
 	return write(fd, buf, count);
 }
 
+int wrapperClose(int fd) {
+	return close(fd);
+}
+
 SocketTcp::SocketTcp() {
 	state=SocketTcp::StateNone;
 	type=Socket::TypeTcp;
@@ -25,7 +29,7 @@ SocketTcp::SocketTcp() {
 
 SocketTcp::~SocketTcp() {
 	// Ensure we disconnect.
-	this->disconnect();
+	this->close();
 }
 
 ssize_t SocketTcp::write(const void *data, size_t size) {
@@ -35,6 +39,10 @@ ssize_t SocketTcp::write(const void *data, size_t size) {
 ssize_t SocketTcp::read(void *data, size_t max) {
 	//need to make this read non-blocking?
 	return (state!=SocketTcp::StateNone ? wrapperRead(sockFd, data, max) : -1);
+}
+
+bool SocketTcp::open(void) {
+	return true;
 }
 
 bool SocketTcp::connect(const char *addrStr, unsigned int port) {
@@ -78,13 +86,16 @@ bool SocketTcp::listen(const struct sockaddr_in *aaddr, socklen_t aaddrLen, int 
 	return true;
 }
 
-void SocketTcp::disconnect(void) {
+bool SocketTcp::close(void) {
 	if (state==SocketTcp::StateNone)
-		return;
+		return false;
 
-	close(sockFd);
+	if (wrapperClose(sockFd)==-1)
+		return false;
 
 	// Update state.
 	state=SocketTcp::StateServer;
 	dir=Socket::DirectionNone;
+
+	return true;
 }

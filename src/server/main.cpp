@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
 			// Connect and send command to stop.
 			sock.write("stop\n", 5); // TODO: Check written correctly.
-			sock.disconnect();
+			sock.close();
 
 			// TODO: Wait for it to actually exit (in case we are restarting).
 
