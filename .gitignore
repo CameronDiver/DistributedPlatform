@@ -1,5 +1,6 @@
 # Executable
 server
+!src/server
 # Container
 container
 # Log file
