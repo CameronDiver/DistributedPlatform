@@ -13,3 +13,11 @@ ssize_t Device::write(const void *data, size_t size) {
 ssize_t Device::read(void *data, size_t max) {
 	return -1;
 }
+
+bool Device::open(void) {
+	return false;
+}
+
+bool Device::close(void) {
+	return false;
+}

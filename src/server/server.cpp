@@ -641,6 +641,10 @@ int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_
 	if (device==NULL)
 		return -1;
 
+	// 'Open' device (initalize).
+	if (!device->open())
+		goto error;
+
 	// Create and add FdEntry to list.
 	fd=this->fdCreate();
 	if (fd==-1)
@@ -656,8 +660,10 @@ int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_
 	return entry->fd;
 
 	error:
-	if (device)
+	if (device) {
+		device->close();
 		delete device;
+	}
 	return -1;
 }
 
@@ -681,8 +687,8 @@ int Server::fdClose(Process *proc, int fd) {
 				return -1;
 			break;
 			case FdTypeDevice:
-				// TODO: this.
-				return -1;
+				if (!entry->d.device->close())
+					return -1;
 			break;
 			default:
 				return -1;
