@@ -36,120 +36,11 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 		log(LogLevelErr, "System call from unknown process with POSIX pid=%u.\n", (unsigned)posixPID);
 		return;
 	}
-	Process *curr=server->procs[pid];
-	
-	// Parse system call.
+
+	// Call function within class to do rest of the work.
 	va_list ap;
 	va_start(ap, id);
-	switch(id) {
-		case SysCommonSysCallExit: {
-			uint32_t status=(uint32_t)va_arg(ap, uint32_t);
-			exit(status);
-		} break;
-		case SysCommonSysCallFork: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			*ret=server->processFork(pid);
-		} break;
-		case SysCommonSysCallGetPid: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			*ret=pid;
-		} break;
-		case SysCommonSysCallAlloc:	{
-			// TODO: Take server wide maxRam into account.
-			void **ret=(void **)va_arg(ap, void **);
-			void *ptr=(void *)va_arg(ap, void *);
-			size_t size=(size_t)va_arg(ap, size_t);
-			*ret=realloc(ptr, size);
-		} break;
-		case SysCommonSysCallExec: {
-			const char *path=(const char *)va_arg(ap, const char *);
-			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
-			char **argv=(char **)va_arg(ap, char **);
-
-			// Create and load new process.
-			Process *newProc=new Process;
-			if (newProc->loadFileFS(server->filesystem, path))
-			{
-				// Copy environment.
-				newProc->setEnviron(curr->getEnviron());
-
-				// Exec should preserve current working directory.
-				newProc->setCwd(curr->getCwd());
-
-				// 'Unload' old process.
-				curr->~Process();
-				
-				// Update process array.
-				server->procs[pid]=newProc;
-
-				// Run (without forking).
-				newProc->arun(&serverSysCall, (void *)server, false, argc, (const char **)argv);
-				exit(EXIT_SUCCESS);
-			}
-		} break;
-		case SysCommonSysCallGetCwd: {
-			uint32_t ret=(uint32_t)va_arg(ap, uint32_t);
-			char *buf=(char *)va_arg(ap, char *);
-			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
-
-			// Check we have a current working directory.
-			if (server->procs[pid]->getCwd()==NULL)
-				ret=0;
-			else if (buf!=NULL) {
-				// Copy string.
-				const char *cwd=server->procs[pid]->getCwd();
-				strncpy(buf, cwd, size);
-
-				// Terminate with null byte in case full length.
-				buf[size-1]='\0';
-
-				// Indicate true length.
-				ret=strlen(cwd)+1;
-			}
-		} break;
-		case SysCommonSysCallChDir: {
-			int32_t ret=(int32_t)va_arg(ap, int32_t);
-			char *path=(char *)va_arg(ap, char *);
-
-			// TODO: Check path is sensible?
-
-			ret=(server->procs[pid]->setCwd(path) ? 0 : -1);
-		} break;
-		case SysCommonSysCallRead: {
-			int32_t ret=(int32_t)va_arg(ap, int32_t);
-			int32_t fd=(int32_t)va_arg(ap, int32_t);
-			void *buf=(void *)va_arg(ap, void *);
-			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
-
-			ret=-1;
-		}
-		case SysCommonSysCallWrite: {
-			int32_t ret=(int32_t)va_arg(ap, int32_t);
-			int32_t fd=(int32_t)va_arg(ap, int32_t);
-			const void *buf=(const void *)va_arg(ap, const void *);
-			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
-
-			ret=-1;
-		}
-		case SysCommonSysCallOpen: {
-			int32_t ret=(int32_t)va_arg(ap, int32_t);
-			const char *pathname=(const char *)va_arg(ap, const void *);
-			uint32_t flags=(uint32_t)va_arg(ap, uint32_t);
-			uint32_t mode=(uint32_t)va_arg(ap, uint32_t);
-
-			ret=-1;
-		}
-		case SysCommonSysCallClose: {
-			int32_t ret=(int32_t)va_arg(ap, int32_t);
-			int32_t fd=(int32_t)va_arg(ap, int32_t);
-
-			ret=-1;
-		}
-		default:
-			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
-		break;
-	}
-	
+	server->syscall(pid, id, ap);
 	va_end(ap);
 }
 
@@ -274,6 +165,90 @@ ProcessPID Server::processFork(ProcessPID parentPID) {
   }
   else
   	return childPID; // fork() return child pid to parent.
+}
+
+void Server::syscall(ProcessPID pid, int id, va_list ap) {
+	Process *curr=this->procs[pid];
+
+	// Parse system call.
+	switch(id) {
+		case SysCommonSysCallExit: {
+			uint32_t status=(uint32_t)va_arg(ap, uint32_t);
+			exit(status);
+		} break;
+		case SysCommonSysCallFork: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			*ret=this->processFork(pid);
+		} break;
+		case SysCommonSysCallGetPid: {
+			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
+			*ret=pid;
+		} break;
+		case SysCommonSysCallAlloc:	{
+			// TODO: Take server wide maxRam into account.
+			void **ret=(void **)va_arg(ap, void **);
+			void *ptr=(void *)va_arg(ap, void *);
+			size_t size=(size_t)va_arg(ap, size_t);
+			*ret=realloc(ptr, size);
+		} break;
+		case SysCommonSysCallExec: {
+			const char *path=(const char *)va_arg(ap, const char *);
+			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
+			char **argv=(char **)va_arg(ap, char **);
+
+			// Create and load new process.
+			Process *newProc=new Process;
+			if (newProc->loadFileFS(this->filesystem, path))
+			{
+				// Copy environment.
+				newProc->setEnviron(curr->getEnviron());
+
+				// Exec should preserve current working directory.
+				newProc->setCwd(curr->getCwd());
+
+				// 'Unload' old process.
+				curr->~Process();
+
+				// Update process array.
+				this->procs[pid]=newProc;
+
+				// Run (without forking).
+				newProc->arun(&serverSysCall, (void *)this, false, argc, (const char **)argv);
+				exit(EXIT_SUCCESS);
+			}
+		} break;
+		case SysCommonSysCallGetCwd: {
+			uint32_t ret=(uint32_t *)va_arg(ap, uint32_t *);
+			char *buf=(char *)va_arg(ap, char *);
+			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
+
+			// Check we have a current working directory.
+			if (this->procs[pid]->getCwd()==NULL)
+				ret=0;
+			else if (buf!=NULL) {
+				// Copy string.
+				const char *cwd=this->procs[pid]->getCwd();
+				strncpy(buf, cwd, size);
+
+				// Terminate with null byte in case full length.
+				buf[size-1]='\0';
+
+				// Indicate true length.
+				ret=strlen(cwd)+1;
+			}
+		} break;
+		case SysCommonSysCallChDir: {
+			int32_t ret=(int32_t *)va_arg(ap, int32_t *);
+			char *path=(char *)va_arg(ap, char *);
+
+			// TODO: Check path is sensible?
+
+			*ret=(this->procs[pid]->setCwd(path) ? 0 : -1);
+		} break;
+		default:
+			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
+		break;
+	}
 }
 
 bool Server::databaseLoad(void) {

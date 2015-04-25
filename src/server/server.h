@@ -25,6 +25,8 @@ class Server {
 	std::vector<Process *> procs;
  	FS *filesystem;
 
+	void syscall(ProcessPID pid, int id, va_list ap);
+
  private:
  	const char *pathDatabase="sys/database.db";
 
