@@ -10,11 +10,11 @@ cd ./container
 cd ../
 
 # Create device files.
-cd ./dev
+cd ./container/dev
 	touch ./null
 	touch ./zero
 	touch ./full
-cd ../
+cd ../../
 
 # Copy default profile script.
 cd ./src/misc
