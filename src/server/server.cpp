@@ -683,8 +683,8 @@ int Server::fdClose(Process *proc, int fd) {
 					return -1;
 			break;
 			case FdTypeSocket:
-				// TODO: this.
-				return -1;
+				if (!entry->d.socket->close())
+					return -1;
 			break;
 			case FdTypeDevice:
 				if (!entry->d.device->close())
