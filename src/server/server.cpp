@@ -115,6 +115,36 @@ extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
 
 			ret=(server->procs[pid]->setCwd(path) ? 0 : -1);
 		} break;
+		case SysCommonSysCallRead: {
+			int32_t ret=(int32_t)va_arg(ap, int32_t);
+			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			void *buf=(void *)va_arg(ap, void *);
+			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
+
+			ret=-1;
+		}
+		case SysCommonSysCallWrite: {
+			int32_t ret=(int32_t)va_arg(ap, int32_t);
+			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			const void *buf=(const void *)va_arg(ap, const void *);
+			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
+
+			ret=-1;
+		}
+		case SysCommonSysCallOpen: {
+			int32_t ret=(int32_t)va_arg(ap, int32_t);
+			const char *pathname=(const char *)va_arg(ap, const void *);
+			uint32_t flags=(uint32_t)va_arg(ap, uint32_t);
+			uint32_t mode=(uint32_t)va_arg(ap, uint32_t);
+
+			ret=-1;
+		}
+		case SysCommonSysCallClose: {
+			int32_t ret=(int32_t)va_arg(ap, int32_t);
+			int32_t fd=(int32_t)va_arg(ap, int32_t);
+
+			ret=-1;
+		}
 		default:
 			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
 		break;

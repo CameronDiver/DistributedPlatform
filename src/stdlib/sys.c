@@ -133,3 +133,19 @@ char *__wrap_getcwd(char *buf, size_t size) {
 	// Success.
 	return buf;
 }
+
+ssize_t __wrap_read(int fd, void *buf, size_t count) {
+	return sys_read(fd, buf, count);
+}
+
+ssize_t __wrap_write(int fd, const void *buf, size_t count) {
+	return sys_write(fd, buf, count);
+}
+
+int __wrap_open(const char *pathname, int flags, mode_t mode) {
+	return sys_open(pathname, flags, mode);
+}
+
+int __wrap_close(int fd) {
+	return sys_close(fd);
+}

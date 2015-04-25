@@ -20,6 +20,10 @@ typedef enum {
 	// Following system calls roughly match those found in Linux.
 	SysCommonSysCallExit=1,
 	SysCommonSysCallFork=2,
+	SysCommonSysCallRead=3,
+	SysCommonSysCallWrite=4,
+	SysCommonSysCallOpen=5,
+	SysCommonSysCallClose=6,
 	SysCommonSysCallExec=11,
 	SysCommonSysCallChDir=12,
 	SysCommonSysCallGetPid=20,

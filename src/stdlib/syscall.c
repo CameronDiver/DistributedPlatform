@@ -48,3 +48,27 @@ uint32_t sys_getcwd(char *buf, uint32_t size) {
 	(*sys_syscall)(sys_data, SysCommonSysCallGetCwd, &ret, buf, size);
 	return ret;
 }
+
+int32_t sys_read(int32_t fd, void *buf, uint32_t count) {
+	int32_t ret;
+	(*sys_syscall)(sys_data, SysCommonSysCallRead, &ret, fd, buf, count);
+	return ret;
+}
+
+int32_t sys_write(int32_t fd, const void *buf, uint32_t count) {
+	int32_t ret;
+	(*sys_syscall)(sys_data, SysCommonSysCallWrite, &ret, fd, buf, count);
+	return ret;
+}
+
+int32_t sys_open(const char *pathname, uint32_t flags, uint32_t mode) {
+	int32_t ret;
+	(*sys_syscall)(sys_data, SysCommonSysCallOpen, &ret, pathname, flags, mode);
+	return ret;
+}
+
+int32_t sys_close(int32_t fd) {
+	int32_t ret;
+	(*sys_syscall)(sys_data, SysCommonSysCallClose, &ret, fd);
+	return ret;
+}
