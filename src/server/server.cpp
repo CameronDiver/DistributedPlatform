@@ -191,10 +191,9 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 
 	// Parse system call.
 	switch(id) {
-		case SysCommonSysCallExit: {
-			uint32_t status=(uint32_t)va_arg(ap, uint32_t);
-			exit(status);
-		} break;
+		case SysCommonSysCallExit:
+			this->syscallExit(pid, (uint32_t)va_arg(ap, uint32_t));
+		break;
 		case SysCommonSysCallFork: {
 			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
 			*ret=this->processFork(pid);
@@ -738,4 +737,20 @@ int Server::fdCreate(void) {
 	entry->type=FdTypeNone;
 	fdEntries.push_back(entry);
 	return i;
+}
+
+void Server::syscallExit(ProcessPID pid, uint32_t status) {
+	Process *curr=this->procs[pid];
+
+	// Close all open file descriptors.
+	// TODO: this
+
+	// Free process and remove from list.
+	delete curr;
+	// TODO: Remove from list.
+
+	// Exit with our status.
+	// TODO: We shouldn't use the status in this way.
+	// Should really keep process in table but as a zombie, so status can be collected?
+	exit(status);
 }

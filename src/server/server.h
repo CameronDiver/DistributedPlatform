@@ -75,6 +75,7 @@ private:
 	int fdClose(Process *proc, int fd);
 	Server::FdEntry *fdGet(int fd);
 	int fdCreate(void); // Returns new fd 'slot' to use.
+	void syscallExit(ProcessPID pid, uint32_t status);
 };
 
 #endif 
