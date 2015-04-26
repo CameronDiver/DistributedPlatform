@@ -19,11 +19,3 @@ ssize_t DeviceFull::read(void *data, size_t max) {
 		memset(data, 0, max);
 	return max;
 }
-
-bool DeviceFull::open(void) {
-	return true;
-}
-
-bool DeviceFull::close(void) {
-	return true;
-}

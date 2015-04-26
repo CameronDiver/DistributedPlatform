@@ -18,11 +18,3 @@ ssize_t DeviceZero::read(void *data, size_t max) {
 		memset(data, 0, max);
 	return max;
 }
-
-bool DeviceZero::open(void) {
-	return true;
-}
-
-bool DeviceZero::close(void) {
-	return true;
-}

@@ -5,6 +5,7 @@
 #include <cstring>
 #include "devices/devfull.h"
 #include "devices/devnull.h"
+#include "devices/devsocket.h"
 #include "devices/devzero.h"
 #include <fcntl.h>
 #include <netdb.h>
@@ -71,7 +72,15 @@ bool Server::run(FS *fs, const char *initPath) {
 		log(LogLevelWarning, "Could not load database.\n");
 	else
 		log(LogLevelInfo, "Loaded database.\n");
-	
+
+	// Add standard devices.
+	if (!devices.add("full", new DeviceFull()))
+		log(LogLevelErr, "Could not add device 'full'.\n");
+	if (!devices.add("null", new DeviceNull()))
+		log(LogLevelErr, "Could not add device 'null'.\n");
+	if (!devices.add("zero", new DeviceZero()))
+		log(LogLevelErr, "Could not add device 'zero'.\n");
+
 	// Load init process.
 	Process *initProc=new Process();
 	if (!initProc->loadFileFS(fs, initPath)) {
@@ -137,6 +146,9 @@ bool Server::run(FS *fs, const char *initPath) {
 	// Close database.
 	sqlite3_close(database);
 	database=NULL;
+
+	// Free devices.
+	devices.~Devices();
 
 	return true;
 }
@@ -627,29 +639,16 @@ int Server::fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t 
 }
 
 int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_t mode) {
-	Device *device=NULL;
-	int fd=-1;
-	FdEntry *entry=NULL;
-
 	// Look for device by name.
-	if (!strcmp(name, "full"))
-		device=new DeviceFull();
-	else if (!strcmp(name, "null"))
-		device=new DeviceNull();
-	else if (!strcmp(name, "zero"))
-		device=new DeviceZero();
+	Device *device=devices.open(name);
 	if (device==NULL)
 		return -1;
 
-	// 'Open' device (initalize).
-	if (!device->open())
-		goto error;
-
 	// Create and add FdEntry to list.
-	fd=this->fdCreate();
+	int fd=this->fdCreate();
 	if (fd==-1)
-		goto error;
-	entry=this->fdGet(fd);
+		return -1;
+	FdEntry *entry=this->fdGet(fd);
 	entry->type=FdTypeDevice;
 	entry->refCount=1;
 	entry->d.device=device;
@@ -658,13 +657,6 @@ int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_
 	proc->fds.push_back(fd);
 
 	return entry->fd;
-
-	error:
-	if (device) {
-		device->close();
-		delete device;
-	}
-	return -1;
 }
 
 int Server::fdClose(Process *proc, int fd) {
@@ -687,8 +679,7 @@ int Server::fdClose(Process *proc, int fd) {
 					return -1;
 			break;
 			case FdTypeDevice:
-				if (!entry->d.device->close())
-					return -1;
+				// TODO: Need to call devices->close(name), but don't have name.
 			break;
 			default:
 				return -1;

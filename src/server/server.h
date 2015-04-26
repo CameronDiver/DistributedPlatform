@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "connection.h"
+#include "devices.h"
 #include "devices/device.h"
 #include "fs.h"
 #include "process.h"
@@ -56,6 +57,7 @@ private:
 	fd_set fdSetActive;
 	sqlite3 *database;
 	bool stopFlag;
+	Devices devices;
 
 	bool databaseLoad(void);
 	ProcessPID processAdd(Process *proc);

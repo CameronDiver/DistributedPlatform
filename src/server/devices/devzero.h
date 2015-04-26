@@ -10,8 +10,6 @@ public:
 
 	ssize_t write(const void *data, size_t size);
 	ssize_t read(void *data, size_t max);
-	bool open(void);
-	bool close(void);
 };
 
 #endif
