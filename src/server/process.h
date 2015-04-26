@@ -3,7 +3,7 @@
 
 #include <cstdarg>
 #include <cstdint>
-#include <list>
+#include <vector>
 #include <unistd.h>
 
 #include "fs.h"
@@ -19,7 +19,7 @@ typedef void (*ProcessRestart)(const void *);
 
 class Process {
  public:
-	std::list<int> fds; // File descriptors.
+	std::vector<int> fds; // File descriptors, local-fd index, global-fd value.
 
  	Process(void);
  	~Process(void);
@@ -41,6 +41,9 @@ class Process {
 	ProcessState getState(void);
 	pid_t getPosixPID(void);
 	void setPosixPID(pid_t pid);
+
+	int fdAdd(int serverFd); // If successful, adds entry and returns process fd. Otherwise returns -1.
+	void fdRemove(int serverFd);
  private:
 	SysCommonProcInfo info;
 	void *dlHandle;

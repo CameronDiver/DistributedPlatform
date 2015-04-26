@@ -262,22 +262,24 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 		} break;
 		case SysCommonSysCallRead: {
 			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			int32_t procFd=(int32_t)va_arg(ap, int32_t);
 			void *buf=(void *)va_arg(ap, void *);
 			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
 
 			// TODO: Check permissions etc.
-			*ret=this->fdRead(fd, buf, count);
+			int serverFd=curr->fds[procFd];
+			*ret=this->fdRead(serverFd, buf, count);
 		}
 		break;
 		case SysCommonSysCallWrite: {
 			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			int32_t procFd=(int32_t)va_arg(ap, int32_t);
 			const void *buf=(const void *)va_arg(ap, const void *);
 			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
 
 			// TODO: Check permissions etc.
-			*ret=this->fdWrite(fd, buf, count);
+			int serverFd=curr->fds[procFd];
+			*ret=this->fdWrite(serverFd, buf, count);
 		}
 		break;
 		case SysCommonSysCallOpen: {
@@ -293,10 +295,11 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 		break;
 		case SysCommonSysCallClose: {
 			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			int32_t fd=(int32_t)va_arg(ap, int32_t);
+			int32_t procFd=(int32_t)va_arg(ap, int32_t);
 
 			// TODO: Check permissions etc.
-			*ret=this->fdClose(curr, fd);
+			int serverFd=curr->fds[procFd];
+			*ret=(this->fdClose(curr, serverFd) ? 0 : -1);
 		}
 		break;
 		default:
@@ -351,7 +354,15 @@ ProcessPID Server::processAdd(Process *proc) {
 
 void Server::processFree(Process *proc) {
 	// Close all open file descriptors.
-	// TODO: this
+	size_t procFd;
+	for(procFd=0;procFd<proc->fds.size();++procFd) {
+		int serverFd=proc->fds[procFd];
+		if (serverFd==-1)
+			continue;
+
+		if (!this->fdClose(proc, serverFd))
+			log(LogLevelErr, "Could not close a file descriptor when freeing process.\n");
+	}
 
 	// Free.
 	delete proc;
@@ -606,7 +617,14 @@ int Server::fdOpenSocket(Process *proc, Socket *socket) {
 	entry->refCount=1;
 	entry->d.socket=socket;
 
-	return entry->fd;
+	// Add internal fd to proc's list.
+	int procFd=proc->fdAdd(entry->fd);
+	if (procFd==-1) {
+		// TODO: Remove above entry from entries list.
+		return -1;
+	}
+
+	return procFd;
 }
 
 int Server::fdOpenFdFromPath(Process *proc, const char *path, int flags, mode_t mode) {
@@ -623,7 +641,7 @@ int Server::fdOpenFdFromPath(Process *proc, const char *path, int flags, mode_t 
 
 int Server::fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t mode) {
 	char *localPath=NULL;
-	int pathFd=-1, fd=-1;
+	int pathFd=-1, fd=-1, procFd=-1;
 	FdEntry *entry=NULL;
 
 	// Find local path.
@@ -646,10 +664,14 @@ int Server::fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t 
 	entry->d.fd=pathFd;
 
 	// Add internal fd to proc's list.
-	proc->fds.push_back(fd);
+	procFd=proc->fdAdd(entry->fd);
+	if (procFd==-1) {
+		// TODO: Remove above entry from entries list.
+		return -1;
+	}
 
 	free(localPath);
-	return entry->fd;
+	return procFd;
 
 	error:
 	free(localPath);
@@ -674,16 +696,20 @@ int Server::fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_
 	entry->d.device=device;
 
 	// Add internal fd to proc's list.
-	proc->fds.push_back(fd);
+	int procFd=proc->fdAdd(entry->fd);
+	if (procFd==-1) {
+		// TODO: Remove above entry from entries list.
+		return -1;
+	}
 
-	return entry->fd;
+	return procFd;
 }
 
-int Server::fdClose(Process *proc, int fd) {
+bool Server::fdClose(Process *proc, int fd) {
 	// Find corressponding FdEntry.
 	FdEntry *entry=this->fdGet(fd);
 	if (entry==NULL)
-		return -1;
+		return false;
 
 	// Will this call result in the FD being closed?
 	assert(entry->refCount>0);
@@ -692,17 +718,17 @@ int Server::fdClose(Process *proc, int fd) {
 		switch(entry->type) {
 			case FdTypeFd:
 				if (close(entry->d.fd)==-1)
-					return -1;
+					return false;
 			break;
 			case FdTypeSocket:
 				if (!entry->d.socket->close())
-					return -1;
+					return false;
 			break;
 			case FdTypeDevice:
 				// TODO: Need to call devices->close(name), but don't have name.
 			break;
 			default:
-				return -1;
+				return false;
 			break;
 		}
 
@@ -714,9 +740,9 @@ int Server::fdClose(Process *proc, int fd) {
 		--entry->refCount;
 
 	// Remove from proc's list of FDs.
-	// TODO: this
+	proc->fdRemove(fd);
 
-	return 0;
+	return true;
 }
 
 Server::FdEntry *Server::fdGet(int fd) {
@@ -729,8 +755,12 @@ int Server::fdCreate(void) {
 	for(i=0;i<fdEntries.size();++i) {
 		if (fdEntries[i]==NULL) {
 			fdEntries[i]=(FdEntry *)malloc(sizeof(FdEntry));
-			return (fdEntries[i]!=NULL ? i : -1);
-		} else if (fdEntries[i]->type==FdTypeNone)
+			if (fdEntries[i]==NULL)
+				return -1;
+			fdEntries[i]->fd=i;
+			fdEntries[i]->type=FdTypeNone;
+		}
+		if (fdEntries[i]->type==FdTypeNone)
 			return i;
 	}
 

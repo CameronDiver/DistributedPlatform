@@ -327,6 +327,8 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	// Set environment.
 	child->setEnviron(this->getEnviron());
 
+	// TODO: Also copy file descriptors.
+
 	// Restart stdlib as we've changed the info struct.
 	(*child->restart)(&child->info);
 	
@@ -357,6 +359,30 @@ pid_t Process::getPosixPID(void) {
 
 void Process::setPosixPID(pid_t pid) {
  	posixPID=pid;
+}
+
+int Process::fdAdd(int serverFd) {
+	// Look for unused slot.
+	size_t i;
+	for(i=0;i<fds.size();++i)
+		if (fds[i]==-1) {
+			fds[i]=serverFd;
+			return i;
+		}
+
+	// Otherwise add new.
+	fds.push_back(serverFd);
+	return i;
+}
+
+void Process::fdRemove(int serverFd) {
+	// TODO: Is serverFd definitely unique among fds?
+	size_t i;
+	for(i=0;i<fds.size();++i)
+		if (fds[i]==serverFd) {
+			fds[i]=-1;
+			return;
+		}
 }
 
 bool Process::loadFileLocal(const char *gpath) {

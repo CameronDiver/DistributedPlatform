@@ -67,14 +67,14 @@ private:
 	void tcpClose(void);
 	void tcpPoll(void);
 	bool tcpRead(Connection *con);
-	ssize_t fdWrite(int fd, const void *buf, size_t count);
-	ssize_t fdRead(int fd, void *buf, size_t count);
+	ssize_t fdWrite(int fd, const void *buf, size_t count); // Expects 'server' fd (not process).
+	ssize_t fdRead(int fd, void *buf, size_t count); // Expects 'server' fd (not process).
 	int fdOpenFdFromPath(Process *proc, const char *path, int flags, mode_t mode); // Wrapper around FromFile() and FromDevice() variants.
 	int fdOpenFdFromFile(Process *proc, const char *path, int flags, mode_t mode);
 	int fdOpenFdFromDevice(Process *proc, const char *name, int flags, mode_t mode);
 	int fdOpenSocket(Process *proc, Socket *socket);
-	int fdClose(Process *proc, int fd);
-	Server::FdEntry *fdGet(int fd);
+	bool fdClose(Process *proc, int fd); // Expects 'server' fd (not process).
+	Server::FdEntry *fdGet(int fd); // Expects 'server' fd (not process).
 	int fdCreate(void); // Returns new fd 'slot' to use.
 	void syscallExit(ProcessPID pid, uint32_t status);
 };
