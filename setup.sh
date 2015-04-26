@@ -72,6 +72,13 @@ cd ./src/programs
 	cp ./args ../../../../container/bin
 	cd ../../
 
+	cd ./shell/src
+	make clean
+	make
+	cd ../bin
+	cp ./shell ../../../../container/bin
+	cd ../../
+
 	cd ./printenv/src
 	make clean
 	make
