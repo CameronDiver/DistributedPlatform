@@ -495,6 +495,18 @@ bool Server::tcpRead(Connection *con) {
 		if (!strcmp(part, "tty")) {
 			// TODO: Should we notify the other party of the result?
 
+			// Connect socket to a special device file.
+			char name[16];
+			unsigned int i;
+			for(i=0;i<1024;++i) {
+				sprintf(name, "tty%u", i);
+				if (!devices.exists(name))
+					break;
+			}
+			log(LogLevelDebug, "name: %s\n", name);
+			if (!devices.add(name, new DeviceSocket(con->sock)))
+				return true;
+
 			// Start new shell.
 			Process *shell=new Process();
 			if (!shell->loadFileFS(filesystem, "/bin/shell"))
@@ -509,7 +521,11 @@ bool Server::tcpRead(Connection *con) {
 			// TODO: Connect connection's socket with processes stdin/stdout.
 
 			// Run shell, initially running user's .profile script, then taking input from stdin.
-			if (!this->processRun(shellPID, true, 1, "home/.profile"))
+			// TODO: Set tty as stdin/stdout instead of passing as argument.
+			char temp[1024];
+			sprintf(temp, "/dev/%s", name);
+//			if (!this->processRun(shellPID, true, 1, "/home/.profile"))
+			if (!this->processRun(shellPID, true, 1, temp))
 				return true;
 
 			// Update connection type.
