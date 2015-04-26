@@ -6,6 +6,7 @@ Socket::Socket() {
 }
 
 Socket::~Socket() {
+	this->close();
 }
 
 ssize_t Socket::write(const void *data, size_t size) {
