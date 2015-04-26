@@ -2,11 +2,20 @@
 #include <cstdlib>
 
 #include "devices.h"
+#include "log.h"
 
 Devices::Devices() {
 }
 
 Devices::~Devices() {
+	// Remove all devices.
+	size_t i=0;
+	while(i<entries.size()) {
+		if (!this->remove(entries[i].name)) {
+			log(LogLevelErr, "Could not remove device at '/dev/%s'.", entries[i].name);
+			++i;
+		}
+	}
 }
 
 bool Devices::add(const char *name, Device *device) {
@@ -37,9 +46,12 @@ bool Devices::add(const char *name, Device *device) {
 
 bool Devices::remove(const char *name) {
 	// Grab entry.
-	Entry *entry=this->get(name);
-	if (entry==NULL)
+	if (name==NULL)
 		return false;
+	ssize_t index=this->getIndex(name);
+	if (index==-1)
+		return false;
+	Entry *entry=&(entries[index]);
 
 	// Still in use?
 	if (entry->refCount>0)
@@ -49,7 +61,7 @@ bool Devices::remove(const char *name) {
 	free(entry->name);
 	entry->name=NULL;
 	delete entry->device;
-	// TODO: Remove entry from entries list.
+	entries.erase(entries.begin()+index);
 	// TODO: Remove file from /dev.
 
 	return true;
@@ -86,9 +98,14 @@ bool Devices::close(const char *name) {
 }
 
 Devices::Entry *Devices::get(const char *name) {
+	ssize_t index=this->getIndex(name);
+	return (index!=-1 ? &(entries[index]) : NULL);
+}
+
+ssize_t Devices::getIndex(const char *name) {
 	size_t i;
 	for(i=0;i<entries.size();++i)
 		if (entries[i].name!=NULL && !strcmp(entries[i].name, name))
-			return &(entries[i]);
-	return NULL;
+			return i;
+	return -1;
 }

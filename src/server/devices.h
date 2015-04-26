@@ -1,6 +1,7 @@
 #ifndef DEVICES_H
 #define DEVICES_H
 
+#include <sys/types.h>
 #include <vector>
 
 #include "devices/device.h"
@@ -25,6 +26,7 @@ private:
 	std::vector<Entry> entries;
 
 	Entry *get(const char *name);
+	ssize_t getIndex(const char *name);
 };
 
 #endif

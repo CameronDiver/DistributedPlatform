@@ -147,9 +147,6 @@ bool Server::run(FS *fs, const char *initPath) {
 	sqlite3_close(database);
 	database=NULL;
 
-	// Free devices.
-	devices.~Devices();
-
 	return true;
 }
 
