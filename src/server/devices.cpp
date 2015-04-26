@@ -29,6 +29,9 @@ bool Devices::add(const char *name, Device *device) {
 	entry.refCount=0;
 	entries.push_back(entry);
 
+	// Create (empty) file to represent this device in /dev.
+	// TODO: this
+
 	return true;
 }
 
@@ -38,8 +41,18 @@ bool Devices::remove(const char *name) {
 	if (entry==NULL)
 		return false;
 
-	// TODO: this
-	return false;
+	// Still in use?
+	if (entry->refCount>0)
+		return false;
+
+	// Tidy up.
+	free(entry->name);
+	entry->name=NULL;
+	delete entry->device;
+	// TODO: Remove entry from entries list.
+	// TODO: Remove file from /dev.
+
+	return true;
 }
 
 bool Devices::exists(const char *name) {
@@ -68,15 +81,7 @@ bool Devices::close(const char *name) {
 	if (entry->refCount<=0)
 		return false;
 
-	// Nothing to be done?
-	if (--entry->refCount>0)
-		return true;
-
-	// Actually close this device.
-	// TODO: this
-	free(entry->name);
-	entry->name=NULL;
-
+	--entry->refCount;
 	return true;
 }
 

@@ -9,13 +9,6 @@ cd ./container
 	mkdir -p ./dev
 cd ../
 
-# Create device files.
-cd ./container/dev
-	touch ./null
-	touch ./zero
-	touch ./full
-cd ../../
-
 # Copy default profile script.
 cd ./src/misc
 	cp profile ../../container/home/.profile
