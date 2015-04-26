@@ -14,7 +14,7 @@ pid_t __wrap_getpid(void) {
 int __wrap_execl(const char *path, const char *arg, ...) {
 	va_list ap;
 	va_start(ap, arg);
-	
+
 	// Find argc.
 	va_list ap2;
 	va_copy(ap2, ap);
@@ -23,19 +23,19 @@ int __wrap_execl(const char *path, const char *arg, ...) {
 	while((nextArg=(const char *)va_arg(ap2, const char *))!=NULL)
 		++argc;
 	va_end(ap2);
-	
+
 	// Allocate memory for argv.
 	char **argv=malloc(sizeof(char *)*(argc+1));
 	if (argv==NULL)
 		goto error;
-	
+
 	// Copy first argument.
 	size_t arg0Size=strlen(arg)+1;
 	argv[0]=malloc(arg0Size);
 	if (argv[0]==NULL)
 		goto error;
 	memcpy(argv[0], arg, arg0Size);
-	
+
 	// Copy other arguments.
 	unsigned int i;
 	for(i=1;(nextArg=(const char *)va_arg(ap, const char *))!=NULL;++i)
@@ -47,20 +47,20 @@ int __wrap_execl(const char *path, const char *arg, ...) {
 		memcpy(argv[i], nextArg, argSize);
 	}
 	va_end(ap);
-	
+
 	// Null terminated list.
 	argv[argc]=NULL;
 	
 	// Call execv to do the rest of the work.
 	int ret=execv(path, argv);
-	
+
 	// Clean up.
 	for(i=0;argv[i]!=NULL;++i)
 		free(argv[i]);
 	free(argv);
-	
+
 	return ret;
-	
+
 	error:
 	if (argv!=NULL) {
 		for(i=0;argv[i]!=NULL;++i)
