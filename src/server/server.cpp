@@ -221,8 +221,8 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 				// Exec should preserve current working directory.
 				newProc->setCwd(curr->getCwd());
 
-				// 'Unload' old process.
-				curr->~Process();
+				// Free old process.
+				this->processFree(curr);
 
 				// Update process array.
 				this->procs[pid]=newProc;
@@ -347,6 +347,14 @@ ProcessPID Server::processAdd(Process *proc) {
 	procs.push_back(proc);
 	
 	return pid;
+}
+
+void Server::processFree(Process *proc) {
+	// Close all open file descriptors.
+	// TODO: this
+
+	// Free.
+	delete proc;
 }
 
 bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
@@ -739,12 +747,11 @@ int Server::fdCreate(void) {
 void Server::syscallExit(ProcessPID pid, uint32_t status) {
 	Process *curr=this->procs[pid];
 
-	// Close all open file descriptors.
-	// TODO: this
+	// Free process.
+	this->processFree(curr);
 
-	// Free process and remove from list.
-	delete curr;
-	// TODO: Remove from list.
+	// Remove from list.
+	// TODO: this
 
 	// Exit with our status.
 	// TODO: We shouldn't use the status in this way.
