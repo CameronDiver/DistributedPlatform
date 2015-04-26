@@ -238,11 +238,11 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
 
 			// Check we have a current working directory.
-			if (this->procs[pid]->getCwd()==NULL)
+			if (curr->getCwd()==NULL)
 				*ret=0;
 			else if (buf!=NULL) {
 				// Copy string.
-				const char *cwd=this->procs[pid]->getCwd();
+				const char *cwd=curr->getCwd();
 				strncpy(buf, cwd, size);
 
 				// Terminate with null byte in case full length.
@@ -258,7 +258,7 @@ void Server::syscall(ProcessPID pid, int id, va_list ap) {
 
 			// TODO: Check path is sensible?
 
-			*ret=(this->procs[pid]->setCwd(path) ? 0 : -1);
+			*ret=(curr->setCwd(path) ? 0 : -1);
 		} break;
 		case SysCommonSysCallRead: {
 			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
