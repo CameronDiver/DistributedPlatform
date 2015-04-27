@@ -7,6 +7,7 @@ DeviceSocket::DeviceSocket(Socket *socket) {
 }
 
 DeviceSocket::~DeviceSocket() {
+	// TODO: Do we need to close the socket and/or close/free the Connection instance?
 }
 
 ssize_t DeviceSocket::write(const void *data, size_t size) {
