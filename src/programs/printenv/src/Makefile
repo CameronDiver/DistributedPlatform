@@ -2,7 +2,7 @@ CC=../../../dcc
 
 CFLAGS=-Wall
 
-OBJS=printenv.o ../../../stdlib/syscall.o ../../../stdlib/stdlib.o ../../../stdlib/stdio.o
+OBJS=printenv.o
 
 EXE=../bin/printenv
 

@@ -2,7 +2,7 @@ CC=../../../dcc
 
 CFLAGS=-Wall
 
-OBJS=true.o ../../../stdlib/syscall.o ../../../stdlib/stdlib.o
+OBJS=true.o
 
 EXE=../bin/true
 

@@ -2,7 +2,7 @@ CC=../../../dcc
 
 CFLAGS=-Wall
 
-OBJS=rabbits.o ../../../stdlib/syscall.o ../../../stdlib/stdlib.o ../../../stdlib/sys.o
+OBJS=rabbits.o
 
 EXE=../bin/rabbits
 

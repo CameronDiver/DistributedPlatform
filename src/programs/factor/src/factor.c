@@ -5,7 +5,7 @@
 int main(int argc, char **argv) {
 	if (argc<=1)
 	{
-		Dprintf("Usage: %s NUMBER ...\n");
+		printf("Usage: %s NUMBER ...\n");
 		return EXIT_FAILURE;
 	}
 	
@@ -13,12 +13,12 @@ int main(int argc, char **argv) {
 	for(i=1;i<argc;++i)
 	{
 		unsigned long long int n=atoll(argv[i]);
-		Dprintf("%llu:", n);
+		printf("%llu:", n);
 		
 		// Special case.
 		if (n<2)
 		{
-			Dprintf(" %llu\n", n);
+			printf(" %llu\n", n);
 			continue;
 		}
 		
@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
 		
 		// No factors?
 		if (n!=1)
-			Dprintf(" %llu", n);
+			printf(" %llu", n);
 		
-		Dprintf("\n");
+		printf("\n");
 	}
 	
 	return EXIT_SUCCESS;

@@ -5,7 +5,7 @@ int main(int argc, char **argv) {
 	// Check arguments.
 	if (argc>2)
 	{
-		Dprintf("Usage: %s [STRING]\n");
+		printf("Usage: %s [STRING]\n");
 		return EXIT_FAILURE;
 	}
 	
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 	
 	// Print until killed.
 	while(1)
-		Dprintf("%s\n", str);
+		printf("%s\n", str);
 	
 	return EXIT_SUCCESS;
 }
