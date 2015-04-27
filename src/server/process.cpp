@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 #include <libgen.h>
 
 #include "process.h"
@@ -10,11 +9,7 @@
 Process::Process(void) {
 	info.argc=0;
 	info.argv=NULL;
-	info.main=NULL;
-	info.syscall=NULL;
-	info.syscallData=NULL;
 	info.environ=NULL;
-	dlHandle=NULL;
 	name=NULL;
 	path=NULL;
 	state=ProcessState::None;
@@ -33,12 +28,6 @@ Process::~Process(void) {
 		info.argv=NULL;
 	}
 	info.argc=0;
-
-	// Dynamic library.
-	if (dlHandle!=NULL)	{
-		dlclose(dlHandle);
-		dlHandle=NULL;
-	}
 	
 	// Name.
 	if (name!=NULL) {
@@ -66,8 +55,6 @@ Process::~Process(void) {
 	cwd=NULL;
 
 	// Others.
-	info.syscall=NULL;
-	info.syscallData=NULL;
 	info.environ=NULL; // No need to free as original allocations free'd above.
 	state=ProcessState::None;
 	posixPID=-1;
@@ -184,15 +171,15 @@ bool Process::setEnviron(const char **env) {
 	return false;
 }
 
-bool Process::run(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, ...) {
+bool Process::run(bool doFork, unsigned int argc, ...) {
 	va_list ap;
 	va_start(ap, argc);
-	bool ret=vrun(syscall, syscallData, doFork, argc, ap);
+	bool ret=vrun(doFork, argc, ap);
 	va_end(ap);
 	return ret;
 }
 
-bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, va_list ap) {
+bool Process::vrun(bool doFork, unsigned int argc, va_list ap) {
 	// Setup argc and argv.
 	++argc; // for program name.
 	char **argv=(char **)malloc(sizeof(char *)*argc);
@@ -221,7 +208,7 @@ bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 	}
 
 	// Call arun() to do rest of the work.
-	if(this->arun(syscall, syscallData, doFork, argc, (const char **)argv))
+	if(this->arun(doFork, argc, (const char **)argv))
 		return true;
 	
 	for(i=0;i<argc;++i)
@@ -230,7 +217,7 @@ bool Process::vrun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 	return false;
 }
 
-bool Process::arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bool doFork, unsigned int argc, const char **argv) {
+bool Process::arun(bool doFork, unsigned int argc, const char **argv) {
 	// TODO: Check argc can fit into type.
 	
 	// Ensure program is loaded but not running.
@@ -250,12 +237,14 @@ bool Process::arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 		info.argc=argc;
 		info.argv=argv;
 		
-		// Setup syscall functor.
-		info.syscall=syscall;
-		info.syscallData=syscallData;
+		// Setup ptrace to intercept system calls etc.
+		// TODO: this (*ptrace*)
 		
-		// Child process calls _start - the entry point of the new program.
-		(*start)((void *)&info);
+		// Exec new process.
+		// TODO: this. think properly about obeying doFork (*ptrace*)
+
+		// Exec returned - error.
+		// TODO: this (*ptrace*)
 
 		// End this process if we forked.
 		if (doFork)
@@ -265,7 +254,7 @@ bool Process::arun(void (*syscall)(void *, uint32_t, ...), void *syscallData, bo
 	return true;
 }
 
-Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscallData) {
+Process *Process::forkCopy(void) {
 	size_t nameSize, pathSize, cwdSize;
 
 	// Create 'blank' child.
@@ -306,31 +295,14 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 	if (child->cwd==NULL)
 		goto error;
 	memcpy(child->cwd, cwd, cwdSize);
-
-	// (re)load shared library.
-	child->dlHandle=dlopen(path, RTLD_LAZY);
-	if (child->dlHandle==NULL)
-		goto error;
-	
-	// Grab function pointers.
-	child->info.main=(SysCommonProcMain)dlsym(child->dlHandle, "main");
-	child->start=(ProcessStart)dlsym(child->dlHandle, "_start");
-	child->restart=(ProcessRestart)dlsym(child->dlHandle, "_restart");
-	if (child->info.main==NULL || child->start==NULL || child->restart==NULL)
-		goto error;
 	
 	// Simple stuff.
-	child->info.syscall=syscall;
-	child->info.syscallData=syscallData;
 	child->state=state;
 
 	// Set environment.
 	child->setEnviron(this->getEnviron());
 
 	// TODO: Also copy file descriptors.
-
-	// Restart stdlib as we've changed the info struct.
-	(*child->restart)(&child->info);
 	
 	return child;
 	
@@ -341,7 +313,6 @@ Process *Process::forkCopy(void (*syscall)(void *, uint32_t, ...), void *syscall
 			free((void *)child->info.argv[i]);
 		free((void *)child->info.argv);
 	}
-	dlclose(child->dlHandle);
 	free((void *)child->name);
 	free((void *)child->path);
 	free((void *)child->cwd);
@@ -393,18 +364,6 @@ bool Process::loadFileLocal(const char *gpath) {
 	if (state!=ProcessState::None)
 		return false;
 
-	// Attempt to open the program as a dynamic library.
-	dlHandle=dlopen(gpath, RTLD_LAZY);
-	if (dlHandle==NULL)
-		goto error;
-
-	// Grab function pointers.
-	info.main=(SysCommonProcMain)dlsym(dlHandle, "main");
-	start=(ProcessStart)dlsym(dlHandle, "_start");
-	restart=(ProcessStart)dlsym(dlHandle, "_restart");
-	if (info.main==NULL || start==NULL || restart==NULL)
-		goto error;
-
 	// Allocate memory for name.
 	pathLast=strstrrev(gpath, "/")+1;
 	nameSize=strlen(pathLast)+1;
@@ -427,10 +386,6 @@ bool Process::loadFileLocal(const char *gpath) {
 	return true;
 
 	error:
-	if (dlHandle!=NULL) {
-		dlclose(dlHandle);
-		dlHandle=NULL;
-	}
 	if (name!=NULL) {
 		free(name);
 		name=NULL;

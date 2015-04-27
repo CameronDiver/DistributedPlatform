@@ -18,35 +18,10 @@
 
 #include "log.h"
 #include "server.h"
-#include "../misc/syscommon.h"
 
 static int callbackInc(void *user, int argc, char **argv, char **azColName){
    (*((int *)user))++;
    return 0;
-}
-
-extern "C" void serverSysCall(void *gdata, uint32_t id, ...)
-{
-	// Find pid.
-	Server *server=(Server *)gdata;
-	pid_t posixPID=getpid();
-	ProcessPID pid=ProcessPIDError;
-	unsigned int i;
-	for(i=0;i<server->procs.size();++i)
-		if (server->procs[i]->getPosixPID()==posixPID) {
-			pid=i;
-			break;
-		}
-	if (pid==ProcessPIDError) {
-		log(LogLevelErr, "System call from unknown process with POSIX pid=%u.\n", (unsigned)posixPID);
-		return;
-	}
-
-	// Call function within class to do rest of the work.
-	va_list ap;
-	va_start(ap, id);
-	server->syscall(pid, id, ap);
-	va_end(ap);
 }
 
 Server::Server(int port) {
@@ -158,7 +133,7 @@ void Server::stop(void) {
 ProcessPID Server::processFork(ProcessPID parentPID) {
 	// Create child process.
 	Process *parent=procs[parentPID];
-	Process *child=parent->forkCopy(&serverSysCall, (void *)this);
+	Process *child=parent->forkCopy();
 	if (child==NULL)
 		return ProcessPIDError;
 	
@@ -174,138 +149,17 @@ ProcessPID Server::processFork(ProcessPID parentPID) {
 		procs.pop_back();
 		return ProcessPIDError;
 	}
-  else if (pid==0)
-  {
-  	procs[childPID]->setPosixPID(getpid());
-  	return 0; // fork() returns 0 to child.
-  }
-  else
-  	return childPID; // fork() return child pid to parent.
-}
+	else if (pid==0)
+	{
+		procs[childPID]->setPosixPID(getpid());
 
-void Server::syscall(ProcessPID pid, int id, va_list ap) {
-	Process *curr=this->procs[pid];
+		// Setup ptrace to intercept system calls etc.
+		// TODO: this (is it even correct?)
 
-	// Parse system call.
-	switch(id) {
-		case SysCommonSysCallExit:
-			this->syscallExit(pid, (uint32_t)va_arg(ap, uint32_t));
-		break;
-		case SysCommonSysCallFork: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			*ret=this->processFork(pid);
-		} break;
-		case SysCommonSysCallGetPid: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			*ret=pid;
-		} break;
-		case SysCommonSysCallAlloc:	{
-			// TODO: Take server wide maxRam into account.
-			void **ret=(void **)va_arg(ap, void **);
-			void *ptr=(void *)va_arg(ap, void *);
-			size_t size=(size_t)va_arg(ap, size_t);
-			*ret=realloc(ptr, size);
-		} break;
-		case SysCommonSysCallExec: {
-			const char *path=(const char *)va_arg(ap, const char *);
-			uint32_t argc=(uint32_t)va_arg(ap, uint32_t);
-			char **argv=(char **)va_arg(ap, char **);
-
-			// Create and load new process.
-			Process *newProc=new Process;
-			if (newProc->loadFileFS(this->filesystem, path))
-			{
-				// Copy environment.
-				newProc->setEnviron(curr->getEnviron());
-
-				// Exec should preserve current working directory.
-				newProc->setCwd(curr->getCwd());
-
-				// Free old process.
-				this->processFree(curr);
-
-				// Update process array.
-				this->procs[pid]=newProc;
-
-				// Run (without forking).
-				newProc->arun(&serverSysCall, (void *)this, false, argc, (const char **)argv);
-				exit(EXIT_SUCCESS);
-			}
-		} break;
-		case SysCommonSysCallGetCwd: {
-			uint32_t *ret=(uint32_t *)va_arg(ap, uint32_t *);
-			char *buf=(char *)va_arg(ap, char *);
-			uint32_t size=(uint32_t)va_arg(ap, uint32_t);
-
-			// Check we have a current working directory.
-			if (curr->getCwd()==NULL)
-				*ret=0;
-			else if (buf!=NULL) {
-				// Copy string.
-				const char *cwd=curr->getCwd();
-				strncpy(buf, cwd, size);
-
-				// Terminate with null byte in case full length.
-				buf[size-1]='\0';
-
-				// Indicate true length.
-				*ret=strlen(cwd)+1;
-			}
-		} break;
-		case SysCommonSysCallChDir: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			char *path=(char *)va_arg(ap, char *);
-
-			// TODO: Check path is sensible?
-
-			*ret=(curr->setCwd(path) ? 0 : -1);
-		} break;
-		case SysCommonSysCallRead: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			int32_t procFd=(int32_t)va_arg(ap, int32_t);
-			void *buf=(void *)va_arg(ap, void *);
-			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
-
-			// TODO: Check permissions etc.
-			int serverFd=curr->fds[procFd];
-			*ret=this->fdRead(serverFd, buf, count);
-		}
-		break;
-		case SysCommonSysCallWrite: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			int32_t procFd=(int32_t)va_arg(ap, int32_t);
-			const void *buf=(const void *)va_arg(ap, const void *);
-			uint32_t count=(uint32_t)va_arg(ap, uint32_t);
-
-			// TODO: Check permissions etc.
-			int serverFd=curr->fds[procFd];
-			*ret=this->fdWrite(serverFd, buf, count);
-		}
-		break;
-		case SysCommonSysCallOpen: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			const char *pathname=(const char *)va_arg(ap, const void *);
-			uint32_t flags=(uint32_t)va_arg(ap, uint32_t);
-			uint32_t mode=(uint32_t)va_arg(ap, uint32_t);
-
-			// TODO: Check permissions etc.
-			// TODO: Path needs simplifying and made absolute (so if ./ make relative to process cwd)
-			*ret=this->fdOpenFdFromPath(curr, pathname, mode, flags);
-		}
-		break;
-		case SysCommonSysCallClose: {
-			int32_t *ret=(int32_t *)va_arg(ap, int32_t *);
-			int32_t procFd=(int32_t)va_arg(ap, int32_t);
-
-			// TODO: Check permissions etc.
-			int serverFd=curr->fds[procFd];
-			*ret=(this->fdClose(curr, serverFd) ? 0 : -1);
-		}
-		break;
-		default:
-			log(LogLevelErr, "Invalid system call id %u.\n", id); // TODO: Give more details (such as process).
-		break;
+		return 0; // fork() returns 0 to child.
 	}
+	else
+		return childPID; // fork() return child pid to parent.
 }
 
 bool Server::databaseLoad(void) {
@@ -374,7 +228,7 @@ bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
 	// Run process.
 	va_list ap;
 	va_start(ap, argc);
-	bool ret=procs[pid]->vrun(&serverSysCall, (void *)this, doFork, argc, ap);
+	bool ret=procs[pid]->vrun(doFork, argc, ap);
 	va_end(ap);
 	
 	return ret;
@@ -772,19 +626,4 @@ int Server::fdCreate(void) {
 	entry->type=FdTypeNone;
 	fdEntries.push_back(entry);
 	return i;
-}
-
-void Server::syscallExit(ProcessPID pid, uint32_t status) {
-	Process *curr=this->procs[pid];
-
-	// Free process.
-	this->processFree(curr);
-
-	// Remove from list.
-	// TODO: this
-
-	// Exit with our status.
-	// TODO: We shouldn't use the status in this way.
-	// Should really keep process in table but as a zombie, so status can be collected?
-	exit(status);
 }

@@ -47,8 +47,6 @@ public:
 
 	ProcessPID processFork(ProcessPID parentPID);
 
-	void syscall(ProcessPID pid, int id, va_list ap);
-
 private:
  	const char *pathDatabase="sys/database.db";
 
@@ -76,7 +74,6 @@ private:
 	bool fdClose(Process *proc, int fd); // Expects 'server' fd (not process).
 	Server::FdEntry *fdGet(int fd); // Expects 'server' fd (not process).
 	int fdCreate(void); // Returns new fd 'slot' to use.
-	void syscallExit(ProcessPID pid, uint32_t status);
 };
 
 #endif 
