@@ -1,6 +1,0 @@
-# Files to be ignored by git
-
-# Object files
-*.o
-# Backup files
-*~
