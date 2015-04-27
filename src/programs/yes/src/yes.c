@@ -5,7 +5,7 @@ int main(int argc, char **argv) {
 	// Check arguments.
 	if (argc>2)
 	{
-		printf("Usage: %s [STRING]\n");
+		printf("Usage: %s [STRING]\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 	
