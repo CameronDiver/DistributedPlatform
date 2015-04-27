@@ -85,6 +85,13 @@ cd ./src/programs
 	cd ../bin
 	cp ./cat ../../../../container/bin
 	cd ../../
+
+	cd ./echo/src
+	make clean
+	make
+	cd ../bin
+	cp ./echo ../../../../container/bin
+	cd ../../
 cd ../../
 
 # Build server.
