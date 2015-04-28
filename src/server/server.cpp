@@ -38,7 +38,7 @@ Server::Server(int port) {
 Server::~Server(void) {
 }
 
-bool Server::run(FS *fs, const char *initPath) {
+bool Server::run(Fs *fs, const char *initPath) {
 	// Setup file system.
 	filesystem=fs;
 

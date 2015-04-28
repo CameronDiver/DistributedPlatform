@@ -6,16 +6,16 @@
 
 #include "fsdirect.h"
 
-FSDirect::FSDirect() {
+FsDirect::FsDirect() {
 	containerPath=NULL;
 }
 
-FSDirect::~FSDirect(void) {
+FsDirect::~FsDirect(void) {
 	free(containerPath);
 	containerPath=NULL;
 }
 
-bool FSDirect::mountFile(const char *path) {
+bool FsDirect::mountFile(const char *path) {
 	// Check if already have a mounted file.
 	if (containerPath!=NULL)
 		return false;
@@ -40,13 +40,13 @@ bool FSDirect::mountFile(const char *path) {
 	return true;
 }
 
-bool FSDirect::unmount() {
+bool FsDirect::unmount() {
 	free(containerPath);
 	containerPath=NULL;
 	return true;
 }
 
-char *FSDirect::fileLocalPath(const char *path) {
+char *FsDirect::fileLocalPath(const char *path) {
 	// Find memory required.
 	size_t containerLen=strlen(containerPath);
 	size_t pathLen=strlen(path);

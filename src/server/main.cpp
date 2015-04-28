@@ -68,7 +68,7 @@ void start(void) {
 
 	// Load file system which server will 'boot' from.
 	const char *containerPath="./container";
-	FSDirect fs;
+	FsDirect fs;
 	if (!fs.mountFile(containerPath)) {
 		log(LogLevelCrit, "Could not load container '%s'.\n", containerPath);
 		exit(EXIT_FAILURE);

@@ -2,7 +2,6 @@
 
 #include "fs.h"
 
-char *FS::fileLocalPath(const char *path) {
-	// TODO: FS::fileLocalPath().
+char *Fs::fileLocalPath(const char *path) {
 	return NULL;
 }

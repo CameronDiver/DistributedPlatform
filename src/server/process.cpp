@@ -59,7 +59,7 @@ Process::~Process(void) {
 	posixPID=-1;
 }
 
-bool Process::loadFileFS(FS *fs, const char *fsPath) {
+bool Process::loadFileFS(Fs *fs, const char *fsPath) {
 	// Check we are not already loaded or running.
 	if (state!=ProcessState::None)
 		return false;

@@ -37,12 +37,12 @@ public:
 
 	std::vector<FdEntry *> fdEntries;
 	std::vector<Process *> procs;
-	FS *filesystem;
+	Fs *filesystem;
 
 	Server(int port=-1);
 	~Server(void);
 
-	bool run(FS *fs, const char *initPath);
+	bool run(Fs *fs, const char *initPath);
 	void stop(void);
 
 	ProcessPID processFork(ProcessPID parentPID);

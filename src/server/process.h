@@ -20,7 +20,7 @@ class Process {
 	Process(void);
 	~Process(void);
 
-	bool loadFileFS(FS *fs, const char *fsPath);
+	bool loadFileFS(Fs *fs, const char *fsPath);
 
 	const char *getCwd(void);
 	bool setCwd(const char *gcwd);

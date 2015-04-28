@@ -3,10 +3,10 @@
 
 #include "fs.h"
 
-class FSDirect : public FS {
+class FsDirect : public Fs {
  public:
-	FSDirect(); // Path to file container with the file system within.
-	~FSDirect(void);
+	FsDirect(); // Path to file container with the file system within.
+	~FsDirect(void);
 
 	bool mountFile(const char *path);
 	bool unmount();
