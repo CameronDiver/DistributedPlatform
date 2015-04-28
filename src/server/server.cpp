@@ -222,13 +222,13 @@ void Server::processFree(Process *proc) {
 	delete proc;
 }
 
-bool Server::processRun(ProcessPID pid, bool doFork, unsigned int argc, ...) {
+bool Server::processRun(ProcessPID pid, unsigned int argc, ...) {
 	assert(pid>=1 && pid<procs.size());
 	
 	// Run process.
 	va_list ap;
 	va_start(ap, argc);
-	bool ret=procs[pid]->vrun(doFork, argc, ap);
+	bool ret=procs[pid]->vrun(argc, ap);
 	va_end(ap);
 	
 	return ret;

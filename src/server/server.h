@@ -60,7 +60,7 @@ private:
 	bool databaseLoad(void);
 	ProcessPID processAdd(Process *proc);
 	void processFree(Process *proc);
-	bool processRun(ProcessPID pid, bool doFork=true, unsigned int argc=0, ...);
+	bool processRun(ProcessPID pid, unsigned int argc=0, ...);
 	bool tcpListen(int port); // Begin listening for other devices over TCP.
 	void tcpClose(void);
 	void tcpPoll(void);

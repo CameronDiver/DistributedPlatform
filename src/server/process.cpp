@@ -7,11 +7,11 @@
 #include "util.h"
 
 Process::Process(void) {
-	info.argc=0;
-	info.argv=NULL;
-	info.environ=NULL;
+	argc=0;
+	argv=NULL;
+	environ=NULL;
 	name=NULL;
-	path=NULL;
+	lPath=NULL;
 	state=ProcessState::None;
 	posixPID=-1;
 	environ=NULL;
@@ -20,15 +20,15 @@ Process::Process(void) {
 
 Process::~Process(void) {
 	// argc and argv.
-	if (info.argv!=NULL) {
+	if (argv!=NULL) {
 		unsigned int i;
-		for(i=0;i<info.argc;++i)
-		free((void *)info.argv[i]);
-		free(info.argv);
-		info.argv=NULL;
+		for(i=0;i<argc;++i)
+		free((void *)argv[i]);
+		free(argv);
+		argv=NULL;
 	}
-	info.argc=0;
-	
+	argc=0;
+
 	// Name.
 	if (name!=NULL) {
 		free(name);
@@ -36,9 +36,9 @@ Process::~Process(void) {
 	}
 	
 	// Path.
-	if (path!=NULL) {
-		free(path);
-		path=NULL;
+	if (lPath!=NULL) {
+		free(lPath);
+		lPath=NULL;
 	}
 	
 	// Environment.
@@ -55,33 +55,32 @@ Process::~Process(void) {
 	cwd=NULL;
 
 	// Others.
-	info.environ=NULL; // No need to free as original allocations free'd above.
 	state=ProcessState::None;
 	posixPID=-1;
 }
 
-bool Process::loadFileFS(FS *fs, const char *path) {
+bool Process::loadFileFS(FS *fs, const char *fsPath) {
 	// Check we are not already loaded or running.
 	if (state!=ProcessState::None)
 		return false;
 
 	// Check path is absolute.
-	if (path==NULL || path[0]!='/')
+	if (fsPath==NULL || fsPath[0]!='/')
 		return false;
 
 	char *localPath, *trueCwd;
 
 	// dlopen requires a local file so ask the file system for such a file.
-	localPath=fs->fileLocalPath(path);
+	localPath=fs->fileLocalPath(fsPath);
 	if (localPath==NULL)
 		goto error;
 
 	// Set current working directory.
 	assert(cwd==NULL);
-	cwd=(char *)malloc(strlen(path)+1);
+	cwd=(char *)malloc(strlen(fsPath)+1);
 	if (cwd==NULL)
 		goto error;
-	strcpy(cwd, path);
+	strcpy(cwd, fsPath);
 	trueCwd=dirname(cwd);
 	memmove(cwd, trueCwd, strlen(trueCwd)+1);
 
@@ -133,12 +132,10 @@ bool Process::setEnviron(const char **env) {
 		free(environ);
 		environ=NULL;
 	}
-	info.environ=environ;
 
 	// Special case - env==NULL.
 	if (env==NULL) {
 		environ=NULL;
-		info.environ=NULL;
 		return true;
 	}
 
@@ -156,8 +153,6 @@ bool Process::setEnviron(const char **env) {
 	}
 	*ptr2=NULL;
 
-	info.environ=environ;
-
 	return true;
 
 	error:
@@ -167,114 +162,120 @@ bool Process::setEnviron(const char **env) {
 		free(environ);
 		environ=NULL;
 	}
-	info.environ=environ;
 	return false;
 }
 
-bool Process::run(bool doFork, unsigned int argc, ...) {
+bool Process::run(unsigned int gargc, ...) {
 	va_list ap;
-	va_start(ap, argc);
-	bool ret=vrun(doFork, argc, ap);
+	va_start(ap, gargc);
+	bool ret=vrun(gargc, ap);
 	va_end(ap);
 	return ret;
 }
 
-bool Process::vrun(bool doFork, unsigned int argc, va_list ap) {
+bool Process::vrun(unsigned int gargc, va_list ap) {
 	// Setup argc and argv.
-	++argc; // for program name.
-	char **argv=(char **)malloc(sizeof(char *)*argc);
-	if (argv==NULL)
+	gargc+=2; // for program name and NULL terminator.
+	char **gargv=(char **)malloc(sizeof(char *)*gargc);
+	if (gargv==NULL)
 		return false;
 	unsigned int i;
 	size_t size=strlen(name)+1;
-	argv[0]=(char *)malloc(sizeof(char)*size);
-	if (argv[0]==NULL) {
-		free((void *)argv);
+	gargv[0]=(char *)malloc(sizeof(char)*size);
+	if (gargv[0]==NULL) {
+		free((void *)gargv);
 		return false;
 	}
-	memcpy((void *)argv[0], (void *)name, size);
-	for(i=1;i<argc;++i) {
+	memcpy((void *)gargv[0], (void *)name, size);
+	for(i=1;i<gargc-1;++i) {
 		const char *arg=(const char *)va_arg(ap, const char *);
 		size_t size=strlen(arg)+1;
-		argv[i]=(char *)malloc(sizeof(char)*size);
-		if (argv[i]==NULL) {
+		gargv[i]=(char *)malloc(sizeof(char)*size);
+		if (gargv[i]==NULL) {
 			unsigned int j;
 			for(j=0;j<i;++j)
-				free((void *)argv[j]);
-			free((void *)argv);
+				free((void *)gargv[j]);
+			free((void *)gargv);
 			return false;
 		}
-		memcpy((void *)argv[i], (void *)arg, size);
+		memcpy((void *)gargv[i], (void *)arg, size);
 	}
+	gargv[gargc-1]=NULL;
 
 	// Call arun() to do rest of the work.
-	if(this->arun(doFork, argc, (const char **)argv))
+	if(this->arun((const char **)gargv))
 		return true;
 	
-	for(i=0;i<argc;++i)
-		free(argv[i]);
-	free(argv);
+	for(i=0;i<gargc;++i)
+		free(gargv[i]);
+	free(gargv);
 	return false;
 }
 
-bool Process::arun(bool doFork, unsigned int argc, const char **argv) {
-	// TODO: Check argc can fit into type.
-	
+bool Process::arun(const char **gargv) {
 	// Ensure program is loaded but not running.
 	if (state!=ProcessState::Loaded)
 		return false;
 
 	// Fork to create new process, if desired.
-	pid_t pid=(doFork ? fork() : 0);
-	if (pid<0)
+	pid_t childPid=fork();
+	if (childPid<0)
 		return false;
-	else if (pid==0) {
+	else if (childPid==0) {
+		// Child.
+
 		// Set state to running and update posixPID.
 		state=ProcessState::Running;
 		posixPID=getpid();
 		
 		// Setup argc and argv.
-		info.argc=argc;
-		info.argv=argv;
-		
+		argc=0;
+		argv=gargv;
+		const char **ptr;
+		for(ptr=gargv;*ptr!=NULL;++ptr)
+			argv[argc++]=*ptr;
+
 		// Setup ptrace to intercept system calls etc.
+		if (ptrace(PTRACE_TRACEME, 0, NULL, NULL)) {
+			// TODO: Indicate failure to parent.
 		// TODO: this (*ptrace*)
+			exit(EXIT_SUCCESS);
+		}
 		
 		// Exec new process.
-		// TODO: this. think properly about obeying doFork (*ptrace*)
+		// TODO: this
+		free(gargv);
 
-		// Exec returned - error.
-		// TODO: this (*ptrace*)
-
-		// End this process if we forked.
-		if (doFork)
-			exit(EXIT_SUCCESS);
+		// Exec returned - error, end this process.
+		exit(EXIT_SUCCESS);
+	} else {
+		// Parent.
 	}
 
 	return true;
 }
 
 Process *Process::forkCopy(void) {
-	size_t nameSize, pathSize, cwdSize;
+	size_t nameSize, lPathSize, cwdSize;
 
 	// Create 'blank' child.
 	Process *child=new Process();
 	if (child==NULL)
 		return NULL;
-	
+
 	// argc and argv.
-	child->info.argv=(const char **)malloc(sizeof(char *)*info.argc);
-	if (child->info.argv==NULL)
+	child->argv=(const char **)malloc(sizeof(char *)*argc);
+	if (child->argv==NULL)
 		goto error;
-	for(child->info.argc=0;child->info.argc<info.argc;++child->info.argc)
+	for(child->argc=0;child->argc<argc;++child->argc)
 	{
-		size_t argSize=strlen(info.argv[child->info.argc])+1;
-		child->info.argv[child->info.argc]=(const char *)malloc(sizeof(char)*argSize);
-		if (child->info.argv[child->info.argc]==NULL)
+		size_t argSize=strlen(argv[child->argc])+1;
+		child->argv[child->argc]=(const char *)malloc(sizeof(char)*argSize);
+		if (child->argv[child->argc]==NULL)
 			goto error;
-		memcpy((void *)child->info.argv[child->info.argc], (void *)info.argv[child->info.argc], argSize);
+		memcpy((void *)child->argv[child->argc], (void *)argv[child->argc], argSize);
 	}
-	
+
 	// Name.
 	nameSize=strlen(name)+1;
 	child->name=(char *)malloc(nameSize);
@@ -283,11 +284,11 @@ Process *Process::forkCopy(void) {
 	memcpy(child->name, name, nameSize);
 	
 	// Path.
-	pathSize=strlen(path)+1;
-	child->path=(char *)malloc(pathSize);
-	if (child->path==NULL)
+	lPathSize=strlen(lPath)+1;
+	child->lPath=(char *)malloc(lPathSize);
+	if (child->lPath==NULL)
 		goto error;
-	memcpy(child->path, path, pathSize);
+	memcpy(child->lPath, lPath, lPathSize);
 
 	// Current working directory.
 	cwdSize=strlen(cwd)+1;
@@ -307,14 +308,14 @@ Process *Process::forkCopy(void) {
 	return child;
 	
 	error:
-	if (child->info.argv!=NULL) {
+	if (child->argv!=NULL) {
 		unsigned int i;
-		for(i=0;i<child->info.argc;++i)
-			free((void *)child->info.argv[i]);
-		free((void *)child->info.argv);
+		for(i=0;i<child->argc;++i)
+			free((void *)child->argv[i]);
+		free((void *)child->argv);
 	}
 	free((void *)child->name);
-	free((void *)child->path);
+	free((void *)child->lPath);
 	free((void *)child->cwd);
 	delete child;
 	return NULL;
@@ -358,7 +359,7 @@ void Process::fdRemove(int serverFd) {
 
 bool Process::loadFileLocal(const char *gpath) {
 	const char *pathLast;
-	size_t nameSize, pathSize;
+	size_t nameSize, lPathSize;
 
 	// Check we are not already loaded or running.
 	if (state!=ProcessState::None)
@@ -373,11 +374,11 @@ bool Process::loadFileLocal(const char *gpath) {
 	memcpy((void *)name, (void *)pathLast, nameSize);
 
 	// Allocate memory for path.
-	pathSize=strlen(gpath)+1;
-	path=(char *)malloc(sizeof(char)*pathSize);
-	if (path==NULL)
+	lPathSize=strlen(gpath)+1;
+	lPath=(char *)malloc(sizeof(char)*lPathSize);
+	if (lPath==NULL)
 		goto error;
-	memcpy((void *)path, (void *)gpath, pathSize);
+	memcpy((void *)lPath, (void *)gpath, lPathSize);
 
 	// Update state.
 	state=ProcessState::Loaded;
@@ -390,9 +391,9 @@ bool Process::loadFileLocal(const char *gpath) {
 		free(name);
 		name=NULL;
 	}
-	if (path!=NULL) {
-		free(path);
-		path=NULL;
+	if (lPath!=NULL) {
+		free(lPath);
+		lPath=NULL;
 	}
 	return false;
 }

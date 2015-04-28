@@ -15,19 +15,12 @@ enum class ProcessState { None, Loaded, Running };
 
 class Process {
  public:
-	typedef struct
-	{
-		//TODO: Do we need a version number of sorts (to ensure stdlib version of this struct matches)?
-		int32_t argc;
-		const char **argv; // TODO: Static assert that sizeof(char)==1?
-		char **environ;
-	} Info;
 	std::vector<int> fds; // File descriptors, local-fd index, global-fd value.
 
 	Process(void);
 	~Process(void);
 
-	bool loadFileFS(FS *fs, const char *path);
+	bool loadFileFS(FS *fs, const char *fsPath);
 
 	const char *getCwd(void);
 	bool setCwd(const char *gcwd);
@@ -35,9 +28,9 @@ class Process {
 	const char **getEnviron(void);
 	bool setEnviron(const char **env);
 
-	bool run(bool doFork, unsigned int argc=0, ...);
-	bool vrun(bool doFork, unsigned int argc, va_list ap);
-	bool arun(bool doFork, unsigned int argc, const char **argv);
+	bool run(unsigned int gargc=0, ...);
+	bool vrun(unsigned int gargc, va_list ap);
+	bool arun(const char **gargv); // NULL terminated list of strings.
 
 	Process *forkCopy(void);
 
@@ -48,13 +41,14 @@ class Process {
 	int fdAdd(int serverFd); // If successful, adds entry and returns process fd. Otherwise returns -1.
 	void fdRemove(int serverFd);
  private:
-	Info info;
 	char *name;
-	char *path;
+	char *lPath; // Local path.
 	ProcessState state;
 	pid_t posixPID;
 	char **environ;
 	char *cwd; // Current working directory.
+	int argc;
+	const char **argv;
 
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 };
