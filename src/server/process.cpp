@@ -2,7 +2,16 @@
 #include <cstdlib>
 #include <cstring>
 #include <libgen.h>
+#include <signal.h>
+#include <sys/ptrace.h>
+#include <sys/reg.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <sys/user.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
+#include "log.h"
 #include "process.h"
 #include "util.h"
 
@@ -236,23 +245,55 @@ bool Process::arun(const char **gargv) {
 			argv[argc++]=*ptr;
 
 		// Setup ptrace to intercept system calls etc.
-		if (ptrace(PTRACE_TRACEME, 0, NULL, NULL)) {
-			// TODO: Indicate failure to parent.
-		// TODO: this (*ptrace*)
-			exit(EXIT_SUCCESS);
-		}
+		if (ptrace(PTRACE_TRACEME, 0, NULL, NULL))
+			exit(EXIT_FAILURE);
 		
 		// Exec new process.
-		// TODO: this
-		free(gargv);
+		execvpe(lPath, (char *const *)argv, environ);
 
 		// Exec returned - error, end this process.
-		exit(EXIT_SUCCESS);
+		exit(EXIT_FAILURE);
 	} else {
 		// Parent.
-	}
+		// Wait for exec call to succeed.
+		bool success=false, call=false;
+		while(!call) {
+			int status;
+			waitpid(childPid, &status, 0);
+			if(WIFEXITED(status)) {
+				break;
+			} else if(WIFSIGNALED(status)) {
+				// Signal - simply allow it to continue.
+				// TODO: Do we need to handle any signals?
+			} else if (WIFSTOPPED(status)) {
+				call=true;
 
-	return true;
+				long long rax=ptrace(PTRACE_PEEKUSER, childPid, 8*ORIG_RAX, NULL);
+				if (rax==SYS_execve)
+					success=true;
+				else {
+					// Kill process.
+					kill(childPid, SIGKILL);
+					break;
+				}
+			}
+
+			// Continue program.
+			ptrace(PTRACE_SYSCALL, childPid, NULL, NULL);
+		}
+
+		if (!success) {
+			log(LogLevelErr, "Could not run process '%s'.\n", name);
+
+			unsigned int i;
+			for(i=0;i<argc;++i)
+				free((void *)argv[i]);
+			free((void *)argv);
+			argv=NULL;
+			argc=0;
+		}
+		return success;
+	}
 }
 
 Process *Process::forkCopy(void) {
