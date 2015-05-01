@@ -66,8 +66,8 @@ bool Server::run(Fs *fs, const char *initPath) {
 		log(LogLevelInfo, "Loaded init process.\n");
 	
 	// Add to list of processes.
-	ProcessPID initPID=this->processAdd(initProc);
-	if (initPID==ProcessPIDError) {
+	ProcessPid initPid=this->processAdd(initProc);
+	if (initPid==ProcessPidError) {
 		log(LogLevelCrit, "Could not add init process to list.\n");
 		return false;
 	}
@@ -75,7 +75,7 @@ bool Server::run(Fs *fs, const char *initPath) {
 		log(LogLevelInfo, "Added init process.\n");
 
 	// Run init process (forking, so non-blocking).
-	if (!this->processRun(initPID, true)) {
+	if (!this->processRun(initPid)) {
 		log(LogLevelCrit, "Could not run init process.\n");
 		return false;
 	}
@@ -130,15 +130,15 @@ void Server::stop(void) {
 	this->stopFlag=true;
 }
 
-ProcessPID Server::processFork(ProcessPID parentPID) {
+ProcessPid Server::processFork(ProcessPid parentPID) {
 	// Create child process.
 	Process *parent=procs[parentPID];
 	Process *child=parent->forkCopy();
 	if (child==NULL)
-		return ProcessPIDError;
+		return ProcessPidError;
 	
 	// Add child to list of processes.
-	ProcessPID childPID=procs.size();
+	ProcessPid childPID=procs.size();
 	procs.push_back(child);
 	
 	// Fork.
@@ -147,11 +147,11 @@ ProcessPID Server::processFork(ProcessPID parentPID) {
 	{
 		// Error.
 		procs.pop_back();
-		return ProcessPIDError;
+		return ProcessPidError;
 	}
 	else if (pid==0)
 	{
-		procs[childPID]->setPosixPID(getpid());
+		procs[childPID]->setPosixPid(getpid());
 
 		// Setup ptrace to intercept system calls etc.
 		// TODO: this (is it even correct?)
@@ -194,13 +194,13 @@ bool Server::databaseLoad(void) {
 	return true;
 }
 
-ProcessPID Server::processAdd(Process *proc) {
+ProcessPid Server::processAdd(Process *proc) {
 	// Check process is loaded but not running (hence ready to run).
 	if (proc->getState()!=ProcessState::Loaded)
-		return ProcessPIDError;
+		return ProcessPidError;
 	
 	// Add to queue.
-	ProcessPID pid=procs.size();
+	ProcessPid pid=procs.size();
 	procs.push_back(proc);
 	
 	return pid;
@@ -222,7 +222,7 @@ void Server::processFree(Process *proc) {
 	delete proc;
 }
 
-bool Server::processRun(ProcessPID pid, unsigned int argc, ...) {
+bool Server::processRun(ProcessPid pid, unsigned int argc, ...) {
 	assert(pid>=1 && pid<procs.size());
 	
 	// Run process.
@@ -382,8 +382,8 @@ bool Server::tcpRead(Connection *con) {
 				return true;
 
 			// Add to list of programs.
-			ProcessPID shellPID=this->processAdd(shell);
-			if (shellPID==ProcessPIDError)
+			ProcessPid shellPID=this->processAdd(shell);
+			if (shellPID==ProcessPidError)
 				return true;
 
 			// Setup stdin and stdout.

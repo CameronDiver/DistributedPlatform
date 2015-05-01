@@ -22,7 +22,7 @@ Process::Process(void) {
 	name=NULL;
 	lPath=NULL;
 	state=ProcessState::None;
-	posixPID=-1;
+	posixPid=-1;
 	environ=NULL;
 	cwd=NULL;
 }
@@ -65,7 +65,7 @@ Process::~Process(void) {
 
 	// Others.
 	state=ProcessState::None;
-	posixPID=-1;
+	posixPid=-1;
 }
 
 bool Process::loadFileFS(Fs *fs, const char *fsPath) {
@@ -233,9 +233,21 @@ bool Process::arun(const char **gargv) {
 	else if (childPid==0) {
 		// Child.
 
+		// Setup ptrace to intercept system calls etc.
+		if (ptrace(PTRACE_TRACEME, 0, NULL, NULL))
+			exit(EXIT_FAILURE);
+
+		// Exec new process.
+		execvpe(lPath, (char *const *)gargv, environ);
+
+		// Exec returned - error, end this process.
+		exit(EXIT_FAILURE);
+	} else {
+		// Parent.
+
 		// Set state to running and update posixPID.
 		state=ProcessState::Running;
-		posixPID=getpid();
+		setPosixPid(childPid);
 		
 		// Setup argc and argv.
 		argc=0;
@@ -244,25 +256,14 @@ bool Process::arun(const char **gargv) {
 		for(ptr=gargv;*ptr!=NULL;++ptr)
 			argv[argc++]=*ptr;
 
-		// Setup ptrace to intercept system calls etc.
-		if (ptrace(PTRACE_TRACEME, 0, NULL, NULL))
-			exit(EXIT_FAILURE);
-		
-		// Exec new process.
-		execvpe(lPath, (char *const *)argv, environ);
-
-		// Exec returned - error, end this process.
-		exit(EXIT_FAILURE);
-	} else {
-		// Parent.
-		// Wait for exec call to succeed.
+		// Wait for exec call to succeed (or error).
 		bool success=false, call=false;
 		while(!call) {
 			int status;
 			waitpid(childPid, &status, 0);
-			if(WIFEXITED(status)) {
+			if(WIFEXITED(status))
 				break;
-			} else if(WIFSIGNALED(status)) {
+			else if(WIFSIGNALED(status)) {
 				// Signal - simply allow it to continue.
 				// TODO: Do we need to handle any signals?
 			} else if (WIFSTOPPED(status)) {
@@ -271,11 +272,9 @@ bool Process::arun(const char **gargv) {
 				long long rax=ptrace(PTRACE_PEEKUSER, childPid, 8*ORIG_RAX, NULL);
 				if (rax==SYS_execve)
 					success=true;
-				else {
+				else
 					// Kill process.
 					kill(childPid, SIGKILL);
-					break;
-				}
 			}
 
 			// Continue program.
@@ -283,15 +282,12 @@ bool Process::arun(const char **gargv) {
 		}
 
 		if (!success) {
-			log(LogLevelErr, "Could not run process '%s'.\n", name);
-
-			unsigned int i;
-			for(i=0;i<argc;++i)
-				free((void *)argv[i]);
-			free((void *)argv);
+			state=ProcessState::Loaded;
+			setPosixPid(-1);
 			argv=NULL;
 			argc=0;
 		}
+
 		return success;
 	}
 }
@@ -366,12 +362,12 @@ ProcessState Process::getState(void) {
 	return state;
 }
 
-pid_t Process::getPosixPID(void) {
-	return this->posixPID;
+pid_t Process::getPosixPid(void) {
+	return posixPid;
 }
 
-void Process::setPosixPID(pid_t pid) {
- 	posixPID=pid;
+void Process::setPosixPid(pid_t pid) {
+	posixPid=pid;
 }
 
 int Process::fdAdd(int serverFd) {

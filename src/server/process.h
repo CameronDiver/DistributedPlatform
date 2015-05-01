@@ -8,8 +8,8 @@
 
 #include "fs.h"
 
-typedef int32_t ProcessPID;
-const ProcessPID ProcessPIDError=-1;
+typedef int32_t ProcessPid;
+const ProcessPid ProcessPidError=-1;
 
 enum class ProcessState { None, Loaded, Running };
 
@@ -35,8 +35,8 @@ class Process {
 	Process *forkCopy(void);
 
 	ProcessState getState(void);
-	pid_t getPosixPID(void);
-	void setPosixPID(pid_t pid);
+	pid_t getPosixPid(void);
+	void setPosixPid(pid_t pid);
 
 	int fdAdd(int serverFd); // If successful, adds entry and returns process fd. Otherwise returns -1.
 	void fdRemove(int serverFd);
@@ -44,7 +44,7 @@ class Process {
 	char *name;
 	char *lPath; // Local path.
 	ProcessState state;
-	pid_t posixPID;
+	pid_t posixPid;
 	char **environ;
 	char *cwd; // Current working directory.
 	int argc;
