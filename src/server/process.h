@@ -11,8 +11,9 @@
 typedef int32_t ProcessPid;
 const ProcessPid ProcessPidError=-1;
 
-enum class ProcessState { None, Loaded, Running, Killing, Killed};
-enum class ProcessActivity { None, SysCall, Death };
+enum class ProcessState { None, Loaded, Running, Stopped, Killing, Killed};
+enum class ProcessActivity { None, SysCall, Stopped, Continued, Death };
+enum class ProcessExitType { None, Exit, Signal };
 
 class Process {
  public:
@@ -51,6 +52,8 @@ class Process {
 	char *cwd; // Current working directory.
 	int argc;
 	const char **argv;
+	ProcessExitType exitType;
+	int exitStatus; // Status or signal depending on exitType.
 
 	bool loadFileLocal(const char *path); // Load from a file in the same layer the server is running.
 };

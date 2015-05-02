@@ -292,6 +292,10 @@ void Server::processPoll(ProcessPid pid) {
 			this->processFree(proc);
 			procs[pid]=NULL;
 		break;
+		case ProcessActivity::Stopped:
+		break;
+		case ProcessActivity::Continued:
+		break;
 	}
 }
 

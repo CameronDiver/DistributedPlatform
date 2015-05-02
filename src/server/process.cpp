@@ -29,6 +29,8 @@ Process::Process(void) {
 	cwd=NULL;
 	argc=0;
 	argv=NULL;
+	exitType=ProcessExitType::None;
+	exitStatus=0;
 }
 
 Process::~Process(void) {
@@ -70,6 +72,8 @@ Process::~Process(void) {
 	// Others.
 	state=ProcessState::None;
 	posixPid=-1;
+	exitType=ProcessExitType::None;
+	exitStatus=0;
 }
 
 bool Process::loadFileFs(Fs *fs, const char *fsPath) {
@@ -410,6 +414,7 @@ ProcessActivity Process::getActivity(void) {
 		case ProcessState::Killed: // If in this state, will have already given out death activity previously.
 			return ProcessActivity::None;
 		break;
+		case ProcessState::Stopped:
 		case ProcessState::Running:
 		case ProcessState::Killing: {
 			// Use waitid (non-blocking) to check for activity.
@@ -424,10 +429,45 @@ ProcessActivity Process::getActivity(void) {
 			if (info.si_pid!=pid)
 				return ProcessActivity::None; // waitid() with WNOHANG still returns success if child isn't waitable.
 
-			// Must be system call.
-			return ProcessActivity::SysCall;
+			// Determine reason for process stopping.
+			switch(info.si_code) {
+				case CLD_EXITED:
+					exitType=ProcessExitType::Exit;
+					exitStatus=info.si_status;
+					state=ProcessState::Killed;
+					return ProcessActivity::Death;
+				break;
+				case CLD_KILLED:
+					exitType=ProcessExitType::Signal;
+					exitStatus=info.si_status;
+					state=ProcessState::Killed;
+					return ProcessActivity::Death;
+				break;
+				case CLD_DUMPED:
+					exitType=ProcessExitType::Signal;
+					exitStatus=info.si_status;
+					state=ProcessState::Killed;
+					return ProcessActivity::Death;
+				break;
+				case CLD_STOPPED:
+					state=ProcessState::Stopped;
+					return ProcessActivity::Stopped;
+				break;
+				case CLD_TRAPPED:
+					return ProcessActivity::SysCall;
+				break;
+				case CLD_CONTINUED:
+					state=ProcessState::Running;
+					return ProcessActivity::Continued;
+				break;
+				default:
+					log(LogLevelErr, "waitid() returned invalid si_code (%i).\n", info.si_code);
+				break;
+			}
 		} break;
 	}
+
+	return ProcessActivity::None;
 }
 
 bool Process::loadFileLocal(const char *gpath) {
@@ -478,6 +518,7 @@ bool Process::kill(bool hard) {
 		case ProcessState::Killed:
 			return false;
 		break;
+		case ProcessState::Stopped:
 		case ProcessState::Running:
 			// Send signal.
 			if (wrapperKill(this->getPosixPid(), (hard ? SIGKILL : SIGTERM))!=0)
