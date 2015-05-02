@@ -233,8 +233,12 @@ void Server::processFree(Process *proc) {
 		if (serverFd==-1)
 			continue;
 
+		// Close fd.
 		if (!this->fdClose(proc, serverFd))
 			log(LogLevelErr, "Could not close a file descriptor when freeing process.\n");
+
+		// Remove from proc's list of FDs.
+		proc->fdRemove(procFd);
 	}
 
 	// Free.
@@ -714,9 +718,6 @@ bool Server::fdClose(Process *proc, int fd) {
 	}
 	else
 		--entry->refCount;
-
-	// Remove from proc's list of FDs.
-	proc->fdRemove(fd);
 
 	return true;
 }

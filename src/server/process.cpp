@@ -397,14 +397,11 @@ int Process::fdAdd(int serverFd) {
 	return i;
 }
 
-void Process::fdRemove(int serverFd) {
-	// TODO: Is serverFd definitely unique among fds?
-	size_t i;
-	for(i=0;i<fds.size();++i)
-		if (fds[i]==serverFd) {
-			fds[i]=-1;
-			return;
-		}
+void Process::fdRemove(int procFd) {
+	if (procFd<0 || procFd>=fds.size())
+		return;
+
+	fds[procFd]=-1;
 }
 
 ProcessActivity Process::getActivity(void) {

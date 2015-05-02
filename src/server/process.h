@@ -41,7 +41,7 @@ class Process {
 	// Misc.
 	Process *forkCopy(void);
 	int fdAdd(int serverFd); // If successful, adds entry and returns process fd. Otherwise returns -1.
-	void fdRemove(int serverFd);
+	void fdRemove(int procFd);
 	ProcessActivity getActivity(void);
  private:
 	char *name;
