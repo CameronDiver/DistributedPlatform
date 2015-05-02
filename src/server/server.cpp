@@ -60,7 +60,7 @@ bool Server::run(Fs *fs, const char *initPath) {
 
 	// Load init process.
 	Process *initProc=new Process();
-	if (!initProc->loadFileFS(fs, initPath)) {
+	if (!initProc->loadFileFs(fs, initPath)) {
 		log(LogLevelCrit, "Could not load init process at '%s'.\n", initPath);
 		return false;
 	}
@@ -103,7 +103,7 @@ bool Server::run(Fs *fs, const char *initPath) {
 
 		// Check if any process has updates.
 		size_t i;
-		for(i=1;i<procs.size();++i) // Start from 1 to avoid dummy process.
+		for(i=0;i<procs.size();++i)
 			this->processPoll(i);
 
 		// Sleep.
@@ -114,7 +114,11 @@ bool Server::run(Fs *fs, const char *initPath) {
 	log(LogLevelInfo, "Stopping.\n");
 
 	// Stop processes.
-	// TODO: this (and also tidy up 'procs').
+	log(LogLevelInfo, "Stopping processes.\n");
+	unsigned int stubborn=this->stopProcesses();
+	if (stubborn>0)
+		log(LogLevelErr, "%u processes refused to die.\n");
+	// TODO: Tidy up this->procs vector.
 
 	// Close connections.
 	// TODO: this (and also tidy up 'connections').
@@ -248,25 +252,103 @@ bool Server::processRun(ProcessPid pid, unsigned int argc, ...) {
 }
 
 void Server::processPoll(ProcessPid pid) {
-	// Check valid process and if so, if any activity.
+	// Check valid process and if so extract info.
 	if (pid==ProcessPidError)
 		return;
 	Process *proc=procs[pid];
-	if (proc==NULL || !proc->isActivity())
+	if (proc==NULL)
 		return;
-
-	// Extract information about said activity.
 	pid_t posixPid=proc->getPosixPid();
-	errno=0;
-	long long orig_rax=ptrace(PTRACE_PEEKUSER, posixPid, 8*ORIG_RAX, NULL);
-	if (errno!=0) {
-		// Error - kill and free process before removing from list.
-		proc->kill();
-		this->processFree(proc);
-		procs[pid]=NULL;
-		return;
+
+	// Check for activity.
+	ProcessActivity activity=proc->getActivity();
+	switch(activity) {
+		case ProcessActivity::None:
+		break;
+		case ProcessActivity::SysCall: {
+			// Extract information about said activity.
+			errno=0;
+			long long orig_rax=ptrace(PTRACE_PEEKUSER, posixPid, 8*ORIG_RAX, NULL);
+			if (errno!=0) {
+				// Error - kill process.
+				proc->kill();
+				return;
+			}
+
+			// Handle system call.
+			switch(orig_rax) {
+				default:
+					log(LogLevelErr, "Server::processPoll: recv'd unhandled system call with id %lld\n", orig_rax);
+				break;
+			}
+
+			// Let process continue.
+			ptrace(PTRACE_SYSCALL, posixPid, NULL, NULL);
+		}break;
+		case ProcessActivity::Death:
+			// Process has just died, free and remove from list.
+			this->processFree(proc);
+			procs[pid]=NULL;
+		break;
 	}
-	ptrace(PTRACE_SYSCALL, posixPid, NULL, NULL);
+}
+
+unsigned int Server::stopProcesses(void) {
+	size_t i, alive, ticks;
+
+	// Send soft kill signal (to allow gracious tidy up).
+	alive=0;
+	for(i=0;i<procs.size();++i)
+		if (procs[i]!=NULL && (procs[i]->getState()==ProcessState::Running || procs[i]->getState()==ProcessState::Killing)) {
+			procs[i]->kill(); // Soft-kill to allow clean tidy up.
+			++alive;
+		}
+
+	// No processes alive?
+	if (alive==0)
+		return 0;
+
+	// Wait for processes to stop.
+	for(ticks=0;ticks<5000;++ticks) {
+		// Check for deaths.
+		alive=0;
+		for(i=0;i<procs.size();++i) {
+			this->processPoll(i);
+			if (procs[i]!=NULL && (procs[i]->getState()==ProcessState::Running || procs[i]->getState()==ProcessState::Killing))
+				++alive;
+		}
+
+		// No processes alive?
+		if (alive==0)
+			return 0;
+
+		// Wait.
+		usleep(1000);
+	}
+
+	// Now try hard kill signal (will almost always succeed).
+	for(i=0;i<procs.size();++i)
+		if (procs[i]!=NULL && (procs[i]->getState()==ProcessState::Running || procs[i]->getState()==ProcessState::Killing)) {
+			procs[i]->kill(true);
+		}
+	for(ticks=0;ticks<5000;++ticks) {
+		// Check for deaths.
+		alive=0;
+		for(i=0;i<procs.size();++i) {
+			this->processPoll(i);
+			if (procs[i]!=NULL && (procs[i]->getState()==ProcessState::Running || procs[i]->getState()==ProcessState::Killing))
+				++alive;
+		}
+
+		// No processes alive?
+		if (alive==0)
+			return 0;
+
+		// Wait.
+		usleep(1000);
+	}
+
+	return alive;
 }
 
 bool Server::tcpListen(int port) {
@@ -413,7 +495,7 @@ bool Server::tcpRead(Connection *con) {
 
 			// Start new shell.
 			Process *shell=new Process();
-			if (!shell->loadFileFS(filesystem, "/bin/shell"))
+			if (!shell->loadFileFs(filesystem, "/bin/shell"))
 				return true;
 
 			// Add to list of programs.

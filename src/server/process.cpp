@@ -20,8 +20,6 @@ int wrapperKill(pid_t pid, int sig) {
 }
 
 Process::Process(void) {
-	argc=0;
-	argv=NULL;
 	environ=NULL;
 	name=NULL;
 	lPath=NULL;
@@ -29,19 +27,11 @@ Process::Process(void) {
 	posixPid=-1;
 	environ=NULL;
 	cwd=NULL;
+	argc=0;
+	argv=NULL;
 }
 
 Process::~Process(void) {
-	// argc and argv.
-	if (argv!=NULL) {
-		unsigned int i;
-		for(i=0;i<argc;++i)
-		free((void *)argv[i]);
-		free(argv);
-		argv=NULL;
-	}
-	argc=0;
-
 	// Name.
 	if (name!=NULL) {
 		free(name);
@@ -67,13 +57,23 @@ Process::~Process(void) {
 	free(cwd);
 	cwd=NULL;
 
+	// argc and argv.
+	if (argv!=NULL) {
+		unsigned int i;
+		for(i=0;i<argc;++i)
+		free((void *)argv[i]);
+		free(argv);
+		argv=NULL;
+	}
+	argc=0;
+
 	// Others.
 	state=ProcessState::None;
 	posixPid=-1;
 }
 
-bool Process::loadFileFS(Fs *fs, const char *fsPath) {
-	// Check we are not already loaded or running.
+bool Process::loadFileFs(Fs *fs, const char *fsPath) {
+	// Check we are in 'none' state, e.g. not running.
 	if (state!=ProcessState::None)
 		return false;
 
@@ -299,6 +299,10 @@ bool Process::arun(const char **gargv) {
 Process *Process::forkCopy(void) {
 	size_t nameSize, lPathSize, cwdSize;
 
+	// Check we are running.
+	if (state!=ProcessState::Running)
+		return NULL;
+
 	// Create 'blank' child.
 	Process *child=new Process();
 	if (child==NULL)
@@ -344,7 +348,8 @@ Process *Process::forkCopy(void) {
 	// Set environment.
 	child->setEnviron(this->getEnviron());
 
-	// TODO: Also copy file descriptors.
+	// Copy file descriptors.
+	child->fds=fds;
 	
 	return child;
 	
@@ -398,25 +403,31 @@ void Process::fdRemove(int serverFd) {
 		}
 }
 
-bool Process::isActivity(void) {
-	// Check we are running.
-	if (state!=ProcessState::Running)
-		return false;
+ProcessActivity Process::getActivity(void) {
+	switch(state) {
+		case ProcessState::None:
+		case ProcessState::Loaded:
+		case ProcessState::Killed: // If in this state, will have already given out death activity previously.
+			return ProcessActivity::None;
+		break;
+		case ProcessState::Running:
+		case ProcessState::Killing: {
+			// Use waitid (non-blocking) to check for activity.
+			pid_t pid=this->getPosixPid();
+			siginfo_t info;
+			info.si_pid=0;
+			if (waitid(P_PID, pid, &info, WEXITED|WSTOPPED|WNOHANG)!=0) {
+				// Only errors possible imply process no longer exists.
+				state=ProcessState::Killed;
+				return ProcessActivity::Death;
+			}
+			if (info.si_pid!=pid)
+				return ProcessActivity::None; // waitid() with WNOHANG still returns success if child isn't waitable.
 
-	// Use waitid (non-blocking) to check for activity.
-	pid_t pid=this->getPosixPid();
-	siginfo_t info;
-	info.si_pid=0;
-	if (waitid(P_PID, (id_t)pid, &info, WEXITED|WSTOPPED|WNOHANG)!=0) {
-		// Error.
-		this->kill();
-		return false;
+			// Must be system call.
+			return ProcessActivity::SysCall;
+		} break;
 	}
-
-	if (info.si_pid!=pid)
-		return false; // waitid() with WNOHANG still returns success if child isn't waitable.
-
-	return true;
 }
 
 bool Process::loadFileLocal(const char *gpath) {
@@ -460,10 +471,28 @@ bool Process::loadFileLocal(const char *gpath) {
 	return false;
 }
 
-bool Process::kill(void) {
-	if (state!=ProcessState::Running)
-		return true;
+bool Process::kill(bool hard) {
+	switch(state) {
+		case ProcessState::None:
+		case ProcessState::Loaded:
+		case ProcessState::Killed:
+			return false;
+		break;
+		case ProcessState::Running:
+			// Send signal.
+			if (wrapperKill(this->getPosixPid(), (hard ? SIGKILL : SIGTERM))!=0)
+				return false;
 
-	state=ProcessState::Killing;
-	return (wrapperKill(this->getPosixPid(), SIGKILL)==0);
+			// Update state.
+			state=ProcessState::Killing;
+
+			return true;
+		break;
+		case ProcessState::Killing:
+			// Send signal.
+			return (wrapperKill(this->getPosixPid(), (hard ? SIGKILL : SIGTERM))==0);
+		break;
+	}
+
+	return false;
 }

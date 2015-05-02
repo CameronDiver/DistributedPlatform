@@ -62,6 +62,7 @@ private:
 	void processFree(Process *proc);
 	bool processRun(ProcessPid pid, unsigned int argc=0, ...);
 	void processPoll(ProcessPid pid); // Check for system calls, etc.
+	unsigned int stopProcesses(void); // Returns number of proccesses who wouldn't die.
 	bool tcpListen(int port); // Begin listening for other devices over TCP.
 	void tcpClose(void);
 	void tcpPoll(void);
