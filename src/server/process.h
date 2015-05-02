@@ -11,7 +11,7 @@
 typedef int32_t ProcessPid;
 const ProcessPid ProcessPidError=-1;
 
-enum class ProcessState { None, Loaded, Running };
+enum class ProcessState { None, Loaded, Running, Killing };
 
 class Process {
  public:
@@ -40,6 +40,10 @@ class Process {
 
 	int fdAdd(int serverFd); // If successful, adds entry and returns process fd. Otherwise returns -1.
 	void fdRemove(int serverFd);
+
+	bool isActivity(void);
+
+	bool kill(void);
  private:
 	char *name;
 	char *lPath; // Local path.

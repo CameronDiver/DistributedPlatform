@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <cassert>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -10,6 +11,8 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include "net/sockettcp.h"
+#include <sys/ptrace.h>
+#include <sys/reg.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -99,8 +102,13 @@ bool Server::run(Fs *fs, const char *initPath) {
 		// Check for any new TCP activity.
 		this->tcpPoll();
 
+		// Check if any process has updates.
+		size_t i;
+		for(i=1;i<procs.size();++i) // Start from 1 to avoid dummy process.
+			this->processPoll(i);
+
 		// Sleep.
-		usleep(10000);
+		usleep(1000);
 	}
 
 	// Tidy up.
@@ -200,6 +208,12 @@ ProcessPid Server::processAdd(Process *proc) {
 		return ProcessPidError;
 	
 	// Add to queue.
+	size_t i;
+	for(i=1;i<procs.size();++i)
+		if (procs[i]==NULL) {
+			procs[i]=proc;
+			return i;
+		}
 	ProcessPid pid=procs.size();
 	procs.push_back(proc);
 	
@@ -232,6 +246,28 @@ bool Server::processRun(ProcessPid pid, unsigned int argc, ...) {
 	va_end(ap);
 	
 	return ret;
+}
+
+void Server::processPoll(ProcessPid pid) {
+	// Check valid process and if so, if any activity.
+	if (pid==ProcessPidError)
+		return;
+	Process *proc=procs[pid];
+	if (proc==NULL || !proc->isActivity())
+		return;
+
+	// Extract information about said activity.
+	pid_t posixPid=proc->getPosixPid();
+	errno=0;
+	long long orig_rax=ptrace(PTRACE_PEEKUSER, posixPid, 8*ORIG_RAX, NULL);
+	if (errno!=0) {
+		// Error - kill and free process before removing from list.
+		proc->kill();
+		this->processFree(proc);
+		procs[pid]=NULL;
+		return;
+	}
+	ptrace(PTRACE_SYSCALL, posixPid, NULL, NULL);
 }
 
 bool Server::tcpListen(int port) {

@@ -15,6 +15,10 @@
 #include "process.h"
 #include "util.h"
 
+int wrapperKill(pid_t pid, int sig) {
+	return kill(pid, sig);
+}
+
 Process::Process(void) {
 	argc=0;
 	argv=NULL;
@@ -214,7 +218,7 @@ bool Process::vrun(unsigned int gargc, va_list ap) {
 	// Call arun() to do rest of the work.
 	if(this->arun((const char **)gargv))
 		return true;
-	
+
 	for(i=0;i<gargc;++i)
 		free(gargv[i]);
 	free(gargv);
@@ -274,7 +278,7 @@ bool Process::arun(const char **gargv) {
 					success=true;
 				else
 					// Kill process.
-					kill(childPid, SIGKILL);
+					this->kill();
 			}
 
 			// Continue program.
@@ -394,6 +398,27 @@ void Process::fdRemove(int serverFd) {
 		}
 }
 
+bool Process::isActivity(void) {
+	// Check we are running.
+	if (state!=ProcessState::Running)
+		return false;
+
+	// Use waitid (non-blocking) to check for activity.
+	pid_t pid=this->getPosixPid();
+	siginfo_t info;
+	info.si_pid=0;
+	if (waitid(P_PID, (id_t)pid, &info, WEXITED|WSTOPPED|WNOHANG)!=0) {
+		// Error.
+		this->kill();
+		return false;
+	}
+
+	if (info.si_pid!=pid)
+		return false; // waitid() with WNOHANG still returns success if child isn't waitable.
+
+	return true;
+}
+
 bool Process::loadFileLocal(const char *gpath) {
 	const char *pathLast;
 	size_t nameSize, lPathSize;
@@ -433,4 +458,12 @@ bool Process::loadFileLocal(const char *gpath) {
 		lPath=NULL;
 	}
 	return false;
+}
+
+bool Process::kill(void) {
+	if (state!=ProcessState::Running)
+		return true;
+
+	state=ProcessState::Killing;
+	return (wrapperKill(this->getPosixPid(), SIGKILL)==0);
 }

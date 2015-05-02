@@ -45,7 +45,7 @@ public:
 	bool run(Fs *fs, const char *initPath);
 	void stop(void);
 
-	ProcessPID processFork(ProcessPID parentPID);
+	ProcessPid processFork(ProcessPid parentPid);
 
 private:
  	const char *pathDatabase="sys/database.db";
@@ -58,9 +58,10 @@ private:
 	Devices devices;
 
 	bool databaseLoad(void);
-	ProcessPID processAdd(Process *proc);
+	ProcessPid processAdd(Process *proc);
 	void processFree(Process *proc);
-	bool processRun(ProcessPID pid, unsigned int argc=0, ...);
+	bool processRun(ProcessPid pid, unsigned int argc=0, ...);
+	void processPoll(ProcessPid pid); // Check for system calls, etc.
 	bool tcpListen(int port); // Begin listening for other devices over TCP.
 	void tcpClose(void);
 	void tcpPoll(void);
