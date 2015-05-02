@@ -495,7 +495,6 @@ bool Server::tcpRead(Connection *con) {
 				if (!devices.exists(name))
 					break;
 			}
-			log(LogLevelDebug, "name: %s\n", name);
 			if (!devices.add(name, new DeviceSocket(con->sock)))
 				return true;
 
@@ -516,8 +515,8 @@ bool Server::tcpRead(Connection *con) {
 			// TODO: Set tty as stdin/stdout instead of passing as argument.
 			char temp[1024];
 			sprintf(temp, "/dev/%s", name);
-//			if (!this->processRun(shellPID, true, 1, "/home/.profile"))
-			if (!this->processRun(shellPID, true, 1, temp))
+//			if (!this->processRun(shellPID, 1, "/home/.profile"))
+			if (!this->processRun(shellPID, 1, temp))
 				return true;
 
 			// Update connection type.
