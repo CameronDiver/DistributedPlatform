@@ -76,6 +76,8 @@ private:
 	bool fdClose(Process *proc, int fd); // Expects 'server' fd (not process).
 	Server::FdEntry *fdGet(int fd); // Expects 'server' fd (not process).
 	int fdCreate(void); // Returns new fd 'slot' to use.
+
+	const char *syscallGetStr(unsigned int id);
 };
 
 #endif 

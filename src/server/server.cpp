@@ -21,6 +21,8 @@
 
 #include "log.h"
 #include "server.h"
+#include "syscallstrings.h"
+
 
 static int callbackInc(void *user, int argc, char **argv, char **azColName){
    (*((int *)user))++;
@@ -278,7 +280,7 @@ void Server::processPoll(ProcessPid pid) {
 			// Handle system call.
 			switch(orig_rax) {
 				default:
-					log(LogLevelErr, "Server::processPoll: recv'd unhandled system call with id %lld\n", orig_rax);
+					log(LogLevelErr, "Received un-handled system call %lld='%s'.\n", orig_rax, this->syscallGetStr(orig_rax));
 				break;
 			}
 
@@ -743,4 +745,10 @@ int Server::fdCreate(void) {
 	entry->type=FdTypeNone;
 	fdEntries.push_back(entry);
 	return i;
+}
+
+// Bit of a hack...
+const char *syscallStrInvalid="(invalid)";
+const char *Server::syscallGetStr(unsigned int id) {
+	return (id<=SYSCALLSTRINGSMAX ? syscallStrings[id] : syscallStrInvalid);
 }
