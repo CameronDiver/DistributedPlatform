@@ -28,8 +28,7 @@ static int callbackInc(void *user, int argc, char **argv, char **azColName){
 }
 
 Server::Server(int port) {
-	Process *dummy=new Process();
-	procs.push_back(dummy); // To create PID of 1 for init.
+	procs.push_back(NULL); // To create PID of 1 for init.
 	
 	tcpPort=port;
 	tcpSockFd=-1;
