@@ -48,8 +48,10 @@ public:
 	ProcessPid processFork(ProcessPid parentPid);
 
 private:
+	// Constants.
  	const char *pathDatabase="sys/database.db";
 
+	// Private variables.
 	std::list <Connection> connections;
 	int tcpSockFd, tcpPort;
 	fd_set fdSetActive;
@@ -57,16 +59,23 @@ private:
 	bool stopFlag;
 	Devices devices;
 
+	// Database functions.
 	bool databaseLoad(void);
+
+	// Process functions.
 	ProcessPid processAdd(Process *proc);
 	void processFree(Process *proc);
 	bool processRun(ProcessPid pid, unsigned int argc=0, ...);
 	void processPoll(ProcessPid pid); // Check for system calls, etc.
 	unsigned int stopProcesses(void); // Returns number of proccesses who wouldn't die.
+
+	// TCP server functions.
 	bool tcpListen(int port); // Begin listening for other devices over TCP.
 	void tcpClose(void);
 	void tcpPoll(void);
 	bool tcpRead(Connection *con);
+
+	// File descriptor functions.
 	ssize_t fdWrite(int fd, const void *buf, size_t count); // Expects 'server' fd (not process).
 	ssize_t fdRead(int fd, void *buf, size_t count); // Expects 'server' fd (not process).
 	int fdOpenFdFromPath(Process *proc, const char *path, int flags, mode_t mode); // Wrapper around FromFile() and FromDevice() variants.
@@ -77,6 +86,7 @@ private:
 	Server::FdEntry *fdGet(int fd); // Expects 'server' fd (not process).
 	int fdCreate(void); // Returns new fd 'slot' to use.
 
+	// System call functions.
 	const char *syscallGetStr(unsigned int id);
 };
 
