@@ -43,11 +43,11 @@ Server::~Server(void) {
 }
 
 bool Server::run(Fs *fs, const char *initPath) {
-	if (!this->runInit(fs, initPath))
-		return false;
-	this->runLoop();
-	this->runQuit();
-	return true;
+	bool ret=this->runInit(fs, initPath);
+	if (ret)
+		this->runLoop(); // Returns when server told to stop.
+	this->runQuit(); // Call this regardless to tidy up anything runInit may have done.
+	return ret;
 }
 
 void Server::stop(void) {
@@ -88,6 +88,9 @@ ProcessPid Server::processFork(ProcessPid parentPID) {
 }
 
 bool Server::runInit(Fs *fs, const char *initPath) {
+	Process *initProc=NULL;
+	ProcessPid initPid=ProcessPidError;
+
 	// Setup file system.
 	filesystem=fs;
 
@@ -106,19 +109,19 @@ bool Server::runInit(Fs *fs, const char *initPath) {
 		log(LogLevelErr, "Could not add device 'zero'.\n");
 
 	// Load init process.
-	Process *initProc=new Process();
-	if (!initProc->loadFileFs(fs, initPath)) {
+	initProc=new (std::nothrow) Process();
+	if (initProc==NULL || !initProc->loadFileFs(fs, initPath)) {
 		log(LogLevelCrit, "Could not load init process at '%s'.\n", initPath);
-		return false;
+		goto error;
 	}
 	else
 		log(LogLevelInfo, "Loaded init process.\n");
 	
 	// Add to list of processes.
-	ProcessPid initPid=this->processAdd(initProc);
+	initPid=this->processAdd(initProc);
 	if (initPid==ProcessPidError) {
 		log(LogLevelCrit, "Could not add init process to list.\n");
-		return false;
+		goto error;
 	}
 	else
 		log(LogLevelInfo, "Added init process.\n");
@@ -126,7 +129,7 @@ bool Server::runInit(Fs *fs, const char *initPath) {
 	// Run init process.
 	if (!this->processRun(initPid)) {
 		log(LogLevelCrit, "Could not run init process.\n");
-		return false;
+		goto error;
 	}
 	else
 		log(LogLevelInfo, "Ran init process.\n");
@@ -135,7 +138,7 @@ bool Server::runInit(Fs *fs, const char *initPath) {
 	if (tcpPort>=0) {
 		if (!this->tcpListen(tcpPort)) {
 			log(LogLevelCrit, "Could not setup TCP socket for listening on port %u\n", tcpPort);
-			return false;
+			goto error;
 		}
 		else
 			log(LogLevelInfo, "Setup TCP socket for listening on port %u.\n", tcpPort);
@@ -144,6 +147,13 @@ bool Server::runInit(Fs *fs, const char *initPath) {
 	FD_SET(tcpSockFd, &fdSetActive);
 
 	return true;
+
+	error:
+	// Free/kill everything local, but Server::run() will take care of calling Server::runQuit().
+	// Only leak is if we create the init process but can't add it to the list (it would otherwise be lost to this function).
+	if (initProc!=NULL && initPid==ProcessPidError)
+		delete initProc;
+	return false;
 }
 
 void Server::runLoop(void) {
