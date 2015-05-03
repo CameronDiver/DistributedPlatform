@@ -43,6 +43,51 @@ Server::~Server(void) {
 }
 
 bool Server::run(Fs *fs, const char *initPath) {
+	if (!this->runInit(fs, initPath))
+		return false;
+	this->runLoop();
+	this->runQuit();
+	return true;
+}
+
+void Server::stop(void) {
+	log(LogLevelInfo, "Stop request received.\n");
+	this->stopFlag=true;
+}
+
+ProcessPid Server::processFork(ProcessPid parentPID) {
+	// Create child process.
+	Process *parent=procs[parentPID];
+	Process *child=parent->forkCopy();
+	if (child==NULL)
+		return ProcessPidError;
+
+	// Add child to list of processes.
+	ProcessPid childPID=procs.size();
+	procs.push_back(child);
+
+	// Fork.
+	pid_t pid=fork();
+	if (pid<0)
+	{
+		// Error.
+		procs.pop_back();
+		return ProcessPidError;
+	}
+	else if (pid==0)
+	{
+		procs[childPID]->setPosixPid(getpid());
+
+		// Setup ptrace to intercept system calls etc.
+		// TODO: this (is it even correct?)
+
+		return 0; // fork() returns 0 to child.
+	}
+	else
+		return childPID; // fork() return child pid to parent.
+}
+
+bool Server::runInit(Fs *fs, const char *initPath) {
 	// Setup file system.
 	filesystem=fs;
 
@@ -78,7 +123,7 @@ bool Server::run(Fs *fs, const char *initPath) {
 	else
 		log(LogLevelInfo, "Added init process.\n");
 
-	// Run init process (forking, so non-blocking).
+	// Run init process.
 	if (!this->processRun(initPid)) {
 		log(LogLevelCrit, "Could not run init process.\n");
 		return false;
@@ -98,6 +143,10 @@ bool Server::run(Fs *fs, const char *initPath) {
 	FD_ZERO(&fdSetActive);
 	FD_SET(tcpSockFd, &fdSetActive);
 
+	return true;
+}
+
+void Server::runLoop(void) {
 	// Main loop.
 	while(!this->stopFlag) {
 		// Check for any new TCP activity.
@@ -111,8 +160,9 @@ bool Server::run(Fs *fs, const char *initPath) {
 		// Sleep.
 		usleep(1000);
 	}
+}
 
-	// Tidy up.
+void Server::runQuit(void) {
 	log(LogLevelInfo, "Stopping.\n");
 
 	// Stop processes.
@@ -134,45 +184,6 @@ bool Server::run(Fs *fs, const char *initPath) {
 	// Close database.
 	sqlite3_close(database);
 	database=NULL;
-
-	return true;
-}
-
-void Server::stop(void) {
-	log(LogLevelInfo, "Stop request received.\n");
-	this->stopFlag=true;
-}
-
-ProcessPid Server::processFork(ProcessPid parentPID) {
-	// Create child process.
-	Process *parent=procs[parentPID];
-	Process *child=parent->forkCopy();
-	if (child==NULL)
-		return ProcessPidError;
-	
-	// Add child to list of processes.
-	ProcessPid childPID=procs.size();
-	procs.push_back(child);
-	
-	// Fork.
-	pid_t pid=fork();
-	if (pid<0)
-	{
-		// Error.
-		procs.pop_back();
-		return ProcessPidError;
-	}
-	else if (pid==0)
-	{
-		procs[childPID]->setPosixPid(getpid());
-
-		// Setup ptrace to intercept system calls etc.
-		// TODO: this (is it even correct?)
-
-		return 0; // fork() returns 0 to child.
-	}
-	else
-		return childPID; // fork() return child pid to parent.
 }
 
 bool Server::databaseLoad(void) {

@@ -59,6 +59,11 @@ private:
 	bool stopFlag;
 	Devices devices;
 
+	// Running functions.
+	bool runInit(Fs *fs, const char *initPath);
+	void runLoop(void);
+	void runQuit(void);
+
 	// Database functions.
 	bool databaseLoad(void);
 
